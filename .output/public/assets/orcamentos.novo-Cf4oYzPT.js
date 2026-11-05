@@ -1,0 +1,1 @@
+import{a as e}from"./client-S1nsjwqC.js";import{t}from"./status-badge-BHZqSeGu.js";import{t as n}from"./quote-form-fOmTtgVv.js";var r=e(),i=()=>(0,r.jsxs)(r.Fragment,{children:[(0,r.jsx)(t,{title:`Novo orçamento`,subtitle:`Preencha cliente, peça, materiais, operações e serviços. Rascunho pode ser salvo a qualquer momento.`}),(0,r.jsx)(n,{})]});export{i as component};
