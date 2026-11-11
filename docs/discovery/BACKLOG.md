@@ -73,6 +73,8 @@ A prioridade acima é de **validação no Discovery**, não uma decisão definit
 
 **Prioridade:** P0/P1, conforme dependência do cálculo e do fluxo. **Valor:** organização do processo e rastreabilidade.
 
+**Execução da história US-001 (namespace da issue):** o fluxo implementado mantém projeto e peça como campos do orçamento e restringe o cadastro de clientes a administradores; orçamentistas selecionam clientes existentes. Para concluir o cadastro, cliente, projeto e peça são exigidos. Pendências técnicas são sinalizadas sem bloquear o salvamento enquanto a regra de suficiência não for aprovada. Os identificadores BR-010 e OPEN-001 fornecidos com US-001 permanecem separados dos IDs do SRC-04; campos detalhados, duplicidade e identificação de peças recorrentes continuam pendentes de validação.
+
 ### Grupo funcional — dados técnicos — Registro e validação de dados técnicos
 **Requisitos:** FR-005, FR-013, FR-015. **Objetivos:** OBJ-001, OBJ-002, OBJ-005. **Atores:** ACT-002, ACT-004, ACT-003, ACT-005.
 
