@@ -35,6 +35,7 @@ import {
   type Quote,
   type QuoteStatus,
 } from "@/lib/data";
+import { quoteIdentityIssues } from "@/lib/quote-validation";
 
 const sel =
   "h-9 w-full rounded-md border border-input bg-card px-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
@@ -103,9 +104,19 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
 
   const { can } = useMe();
   async function save(status: QuoteStatus) {
-    if (!partName.trim()) {
-      toast.error("Informe o nome do projeto/peça.");
+    const identityIssues = quoteIdentityIssues({
+      clientId,
+      project,
+      partName,
+    });
+    if (identityIssues.length > 0) {
+      toast.error(identityIssues.join(" "));
       return;
+    }
+    if (pend.length > 0) {
+      toast.warning(
+        `Existem pendências técnicas: ${pend.map((item) => item.message).join("; ")}.`,
+      );
     }
     setSaving(true);
     const savedStatus = can.changeStatus
@@ -173,9 +184,10 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5 sm:col-span-2">
-              <Label>Cliente</Label>
+              <Label>Cliente *</Label>
               <select
                 className={sel}
+                required
                 value={clientId}
                 onChange={(e) => setClientId(e.target.value)}
               >
@@ -190,8 +202,9 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
               </select>
             </div>
             <div className="space-y-1.5">
-              <Label>Projeto</Label>
+              <Label>Projeto *</Label>
               <Input
+                required
                 value={project}
                 onChange={(e) => setProject(e.target.value)}
                 placeholder="Ex.: Redutor laminador L2"
@@ -200,6 +213,7 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
             <div className="space-y-1.5">
               <Label>Peça *</Label>
               <Input
+                required
                 value={partName}
                 onChange={(e) => setPartName(e.target.value)}
                 placeholder="Ex.: Eixo de transmissão"
@@ -849,7 +863,8 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
               </ul>
             )}
             <p className="mt-2 text-xs text-muted-foreground">
-              Pendências não impedem salvar rascunho.
+              Pendências são sinalizadas, mas não impedem salvar. A regra de
+              bloqueio por insuficiência técnica ainda precisa ser validada.
             </p>
           </CardContent>
         </Card>
