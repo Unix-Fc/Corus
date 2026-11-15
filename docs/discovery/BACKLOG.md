@@ -154,6 +154,8 @@ A prioridade acima é de **validação no Discovery**, não uma decisão definit
 
 **Prioridade:** P0. **Valor:** reduzir erro de consumo e de custo de material.
 
+**Execução da história US-002 (namespace da issue):** o orçamento permite selecionar um material cadastrado ou informar sua descrição, registrar dimensões brutas, peso bruto por peça, custo/kg, fator de uso, quantidade e referência histórica. O sistema apresenta a estimativa provisória `peso bruto × custo/kg × fator de uso × quantidade`, arredondada a centavos. A fórmula multiplicativa é uma hipótese de implementação, não uma regra aprovada; materiais sem dados obrigatórios são sinalizados, não podem ser aprovados nem gerar proposta e seus totais não são apresentados como validados. Referências históricas podem ser marcadas como inconsistentes e não alimentam o cálculo automaticamente; não há normalização automática de histórico. OPEN-011..014 permanecem pendentes de validação.
+
 ### Grupo funcional — estimativa de tempo — Estimativa de tempo por máquina, setup e operação
 **Requisitos:** FR-004, FR-017. **Objetivos:** OBJ-001, OBJ-002, OBJ-003. **Atores:** ACT-002, ACT-005, ACT-003.
 
