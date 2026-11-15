@@ -7,6 +7,7 @@ import { Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/status-badge";
+import { materialInputIssues } from "@/lib/calc";
 import { brl, quoteCode, quoteTotals, STATUS_LABEL, useQuotes, type QuoteStatus } from "@/lib/data";
 import { useMe } from "@/hooks/use-me";
 
@@ -25,6 +26,11 @@ function Pipeline() {
   const { can } = useMe();
   const qc = useQueryClient();
   async function move(id: string, s: QuoteStatus) {
+    const quote = quotes.find((q) => q.id === id);
+    if (s === "aprovado" && quote && materialInputIssues(quote.materials).length > 0) {
+      toast.error("Não é possível aprovar: complete os dados de consumo dos materiais.");
+      return;
+    }
     const { error } = await supabase.from("quotes").update({ status: s }).eq("id", id);
     if (error) { toast.error(error.message); return; }
     qc.invalidateQueries({ queryKey: ["quotes"] });
@@ -44,9 +50,10 @@ function Pipeline() {
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {COLS.map((s) => {
           const items = quotes.filter((q) => q.status === s);
+          const hasIncompleteMaterials = items.some((q) => materialInputIssues(q.materials).length > 0);
           return (
             <div key={s} className="rounded-md bg-muted/60 p-3">
-              <div className="mb-3 flex items-baseline justify-between"><h2 className="text-sm font-semibold">{STATUS_LABEL[s]} <span className="text-muted-foreground">({items.length})</span></h2><span className="num text-xs">{brl(items.reduce((a, q) => a + quoteTotals(q).total, 0))}</span></div>
+              <div className="mb-3 flex items-baseline justify-between"><h2 className="text-sm font-semibold">{STATUS_LABEL[s]} <span className="text-muted-foreground">({items.length})</span></h2><span className="num text-xs">{hasIncompleteMaterials ? "Cálculos incompletos" : brl(items.reduce((a, q) => a + quoteTotals(q).total, 0))}</span></div>
               <div className="space-y-2">
                 {items.map((q) => (
                   <Card key={q.id}><CardContent className="space-y-2 p-3 text-sm">
@@ -54,10 +61,10 @@ function Pipeline() {
                     <div className="font-medium">{q.part_name}</div>
                     <div className="text-xs text-muted-foreground">{q.clients?.name}</div>
                     <div className="flex items-center justify-between gap-2">
-                      <span className="num font-semibold">{brl(quoteTotals(q).total)}</span>
+                      <span className="num font-semibold">{materialInputIssues(q.materials).length > 0 ? "Cálculo incompleto" : brl(quoteTotals(q).total)}</span>
                       {can.changeStatus && (
                         <select aria-label="Mover" className="h-7 rounded border border-input bg-card px-1 text-xs" value={s} onChange={(e) => move(q.id, e.target.value as QuoteStatus)}>
-                          {Object.entries(STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                          {Object.entries(STATUS_LABEL).map(([k, v]) => <option key={k} value={k} disabled={k === "aprovado" && materialInputIssues(q.materials).length > 0}>{v}</option>)}
                         </select>
                       )}
                       {!can.changeStatus && <StatusBadge status={s} />}

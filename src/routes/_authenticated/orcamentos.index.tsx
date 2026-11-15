@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageHeader, StatusBadge } from "@/components/status-badge";
-import { technicalPendencies } from "@/lib/calc";
+import { materialInputIssues, technicalPendencies } from "@/lib/calc";
 import {
   brl,
   dt,
@@ -125,6 +125,8 @@ function List() {
                     materials: x.materials.length,
                     operations: x.operations.length,
                   });
+                  const materialCalculationPending =
+                    materialInputIssues(x.materials).length > 0;
                   return (
                     <tr
                       key={x.id}
@@ -143,7 +145,7 @@ function List() {
                       <td className="px-3">
                         <div className="font-medium">
                           {x.part_name}{" "}
-                          {pend.length > 0 && (
+                          {(pend.length > 0 || materialCalculationPending) && (
                             <AlertTriangle
                               className="inline h-3.5 w-3.5 text-warning"
                               aria-label="Pendências técnicas"
@@ -164,7 +166,9 @@ function List() {
                         {dt(x.updated_at)}
                       </td>
                       <td className="whitespace-nowrap pl-3 text-right num font-medium">
-                        {brl(quoteTotals(x).total)}
+                        {materialCalculationPending
+                          ? "Cálculo incompleto"
+                          : brl(quoteTotals(x).total)}
                       </td>
                     </tr>
                   );
