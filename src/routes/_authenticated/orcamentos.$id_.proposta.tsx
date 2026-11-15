@@ -1,12 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Printer, ArrowLeft, Factory } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  materialCost,
-  materialInputIssues,
-  operationCost,
-  productionEstimate,
-} from "@/lib/calc";
+import { materialCost, operationCost, productionEstimate } from "@/lib/calc";
 import {
   brl,
   n2,
@@ -36,7 +31,6 @@ function Proposal() {
   const { data: q } = useQuote(id);
   const { data: params = [] } = useParams();
   if (!q) return <p className="text-muted-foreground">Carregando…</p>;
-  const materialIssues = materialInputIssues(q.materials);
   if (q.status !== "aprovado") {
     return (
       <div className="space-y-4">
@@ -47,26 +41,6 @@ function Proposal() {
           <Link to="/orcamentos/$id" params={{ id }}>
             <ArrowLeft />
             Voltar ao orçamento
-          </Link>
-        </Button>
-      </div>
-    );
-  }
-  if (materialIssues.length > 0) {
-    return (
-      <div className="space-y-4">
-        <p className="text-destructive">
-          A proposta não pode ser gerada: os dados de consumo dos materiais
-          estão incompletos.
-        </p>
-        <ul className="list-disc pl-5 text-sm text-muted-foreground">
-          {materialIssues.map((issue) => (
-            <li key={issue}>{issue}</li>
-          ))}
-        </ul>
-        <Button variant="outline" asChild>
-          <Link to="/orcamentos/$id/editar" params={{ id }}>
-            Completar dados dos materiais
           </Link>
         </Button>
       </div>
@@ -240,11 +214,8 @@ function Proposal() {
           </p>
         )}
         <p className="mt-8 text-xs text-muted-foreground">
-          Documento gerado pelo sistema de orçamentos Corus (MVP). O cálculo de
-          matéria-prima usa peso bruto × custo/kg × fator de uso × quantidade,
-          como estimativa provisória pendente de validação de negócio. Condições
-          comerciais, impostos, margens e perdas também podem depender de
-          validação.
+          Documento gerado pelo sistema de orçamentos Corus (MVP). Condições
+          comerciais, impostos e margens sujeitos a validação.
         </p>
       </div>
     </>

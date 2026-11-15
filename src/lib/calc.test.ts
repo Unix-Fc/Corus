@@ -2,8 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   computeQuote,
   hourlyCostFromMonthlySalary,
-  materialCost,
-  materialInputIssues,
   operationCost,
   operationHourlyCost,
   productionEstimate,
@@ -61,49 +59,6 @@ describe("cálculo do orçamento", () => {
   it("aplica percentuais apenas quando configurados", () => {
     const r = computeQuote({ ...base, adjustments: { margem_pct: 10 } });
     expect(r.margem).toBe(467.32);
-  });
-
-  it("estima material com peso bruto, custo/kg, fator de uso e quantidade, arredondando em centavos", () => {
-    const material = {
-      description: "Aço 4140",
-      unit: "pç",
-      qty: 3,
-      unit_cost: 0,
-      raw_dimensions: "Ø50 × 200 mm",
-      weight_kg: 2.125,
-      cost_per_kg: 21.5,
-      use_factor: 1.2,
-    };
-    expect(materialCost(material)).toBe(164.48);
-    expect(
-      computeQuote({
-        quantity: 3,
-        materials: [material],
-        operations: [],
-        services: [],
-      }).materials,
-    ).toBe(164.48);
-    expect(materialInputIssues([material])).toEqual([]);
-  });
-
-  it("não calcula material com dados de consumo ausentes e informa cada campo pendente", () => {
-    const material = {
-      description: "Aço 4140",
-      unit: "pç",
-      qty: 3,
-      unit_cost: 0,
-      raw_dimensions: "",
-      weight_kg: 0,
-      cost_per_kg: 0,
-      use_factor: 0,
-    };
-    expect(materialCost(material)).toBe(0);
-    expect(materialInputIssues([material])).toHaveLength(4);
-  });
-
-  it("mantém o cálculo de linhas antigas de material para compatibilidade", () => {
-    expect(materialCost(base.materials[0])).toBe(2064);
-    expect(materialInputIssues(base.materials)).toHaveLength(4);
   });
 
   it("consolida setup e tempo de operação na estimativa", () => {

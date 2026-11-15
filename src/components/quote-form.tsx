@@ -17,7 +17,6 @@ import {
   computeQuote,
   hourlyCostFromMonthlySalary,
   materialCost,
-  materialInputIssues,
   operationCost,
   productionEstimate,
   technicalPendencies,
@@ -94,8 +93,6 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
     materials: materials.length,
     operations: operations.length,
   });
-  const materialIssues = materialInputIssues(materials);
-  const materialCalculationPending = materialIssues.length > 0;
 
   const byKind = (k: string) => catalog.filter((c) => c.kind === k && c.active);
   const upd = <T,>(
@@ -114,12 +111,6 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
     });
     if (identityIssues.length > 0) {
       toast.error(identityIssues.join(" "));
-      return;
-    }
-    if (status !== "rascunho" && materialCalculationPending) {
-      toast.error(
-        "Complete os dados de todos os materiais antes de salvar um orçamento calculado. Você ainda pode salvar como rascunho.",
-      );
       return;
     }
     if (pend.length > 0) {
@@ -149,7 +140,7 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
       services: services as unknown as Json,
       adjustments: adjustments as Json,
       status: savedStatus,
-      total: materialCalculationPending ? 0 : totals.total,
+      total: totals.total,
       lead_time_days: leadManual ? leadDays : est.days,
       lead_time_manual: leadManual,
       notes,
@@ -326,37 +317,17 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
               {
                 item_id: null,
                 description: "",
-                unit: "pç",
+                unit: "kg",
                 qty: 1,
                 unit_cost: 0,
-                raw_dimensions: "",
-                weight_kg: undefined,
-                cost_per_kg: undefined,
-                use_factor: undefined,
-                history_reference: "",
               },
             ])
           }
-          totalLabel={
-            materialCalculationPending ? "Cálculo incompleto" : undefined
-          }
-          tableClassName="min-w-[1320px]"
-          footer="Cálculo provisório: peso bruto × custo/kg × fator de uso × quantidade. Fórmula e critérios de perdas ainda aguardam validação (Discovery)."
-          head={[
-            "Matéria-prima",
-            "Dimensões brutas",
-            "Peso bruto (kg/peça)",
-            "Custo (R$/kg)",
-            "Fator de uso",
-            "Qtd. peças",
-            "Custo estimado",
-            "Referência histórica (opcional)",
-            "",
-          ]}
+          head={["Material", "Un.", "Qtd", "Custo unit.", "Subtotal", ""]}
         >
           {materials.map((m, i) => (
             <tr key={i} className="border-t">
-              <td className="p-1.5 min-w-52">
+              <td className="p-1.5 min-w-48">
                 <select
                   className={sel}
                   value={m.item_id ?? ""}
@@ -370,11 +341,8 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
                         ? {
                             item_id: it.id,
                             description: it.name,
-                            unit: "pç",
-                            cost_per_kg:
-                              it.unit?.toLowerCase() === "kg"
-                                ? Number(it.unit_cost)
-                                : undefined,
+                            unit: it.unit ?? "",
+                            unit_cost: Number(it.unit_cost),
                           }
                         : { item_id: null },
                     );
@@ -387,82 +355,19 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
                     </option>
                   ))}
                 </select>
-                <Input
-                  aria-label="Descrição da matéria-prima"
-                  className={`${cell} mt-1`}
-                  value={m.description}
-                  onChange={(e) =>
-                    upd(materials, setMaterials, i, {
-                      description: e.target.value,
-                      item_id: null,
-                    })
-                  }
-                  placeholder="Ou informe o material"
-                />
               </td>
-              <td className="p-1.5 min-w-40">
+              <td className="p-1.5 w-16">
                 <Input
-                  aria-label="Dimensões brutas"
                   className={cell}
-                  value={m.raw_dimensions ?? ""}
+                  value={m.unit}
                   onChange={(e) =>
-                    upd(materials, setMaterials, i, {
-                      raw_dimensions: e.target.value,
-                    })
-                  }
-                  placeholder="Ex.: Ø50 × 200 mm"
-                />
-              </td>
-              <td className="p-1.5 w-32">
-                <Input
-                  aria-label="Peso bruto por peça em kg"
-                  type="number"
-                  min="0"
-                  step="0.001"
-                  className={cell}
-                  value={m.weight_kg ?? ""}
-                  onChange={(e) =>
-                    upd(materials, setMaterials, i, {
-                      weight_kg: Number(e.target.value),
-                    })
-                  }
-                />
-              </td>
-              <td className="p-1.5 w-28">
-                <Input
-                  aria-label="Custo por quilograma"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  className={cell}
-                  value={m.cost_per_kg ?? ""}
-                  onChange={(e) =>
-                    upd(materials, setMaterials, i, {
-                      cost_per_kg: Number(e.target.value),
-                    })
+                    upd(materials, setMaterials, i, { unit: e.target.value })
                   }
                 />
               </td>
               <td className="p-1.5 w-24">
                 <Input
-                  aria-label="Fator de uso"
                   type="number"
-                  min="0"
-                  step="0.01"
-                  className={cell}
-                  value={m.use_factor ?? ""}
-                  onChange={(e) =>
-                    upd(materials, setMaterials, i, {
-                      use_factor: Number(e.target.value),
-                    })
-                  }
-                />
-              </td>
-              <td className="p-1.5 w-24">
-                <Input
-                  aria-label="Quantidade de peças"
-                  type="number"
-                  min="0"
                   step="0.01"
                   className={cell}
                   value={m.qty}
@@ -473,35 +378,21 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
                   }
                 />
               </td>
-              <td className="p-1.5 text-right num whitespace-nowrap">
-                {materialInputIssues([m]).length > 0
-                  ? "Pendente"
-                  : brl(materialCost(m))}
-              </td>
-              <td className="p-1.5 min-w-48">
+              <td className="p-1.5 w-28">
                 <Input
-                  aria-label="Referência de histórico de consumo"
+                  type="number"
+                  step="0.01"
                   className={cell}
-                  value={m.history_reference ?? ""}
+                  value={m.unit_cost}
                   onChange={(e) =>
                     upd(materials, setMaterials, i, {
-                      history_reference: e.target.value,
+                      unit_cost: Number(e.target.value),
                     })
                   }
-                  placeholder="Ex.: OP/NF e data"
                 />
-                <label className="mt-1 flex items-center gap-1 text-xs text-warning-foreground">
-                  <input
-                    type="checkbox"
-                    checked={m.history_inconsistent ?? false}
-                    onChange={(e) =>
-                      upd(materials, setMaterials, i, {
-                        history_inconsistent: e.target.checked,
-                      })
-                    }
-                  />
-                  Histórico inconsistente
-                </label>
+              </td>
+              <td className="p-1.5 text-right num whitespace-nowrap">
+                {brl(materialCost(m))}
               </td>
               <td className="p-1.5">
                 <Button
@@ -517,23 +408,6 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
             </tr>
           ))}
         </LineCard>
-        {materialIssues.length > 0 && (
-          <div className="flex gap-3 rounded-md border border-warning/40 bg-warning-soft p-3 text-sm">
-            <AlertTriangle className="h-5 w-5 shrink-0 text-warning" />
-            <div>
-              <div className="font-medium">Custo de material incompleto</div>
-              <ul className="list-disc pl-4">
-                {materialIssues.map((issue) => (
-                  <li key={issue}>{issue}</li>
-                ))}
-              </ul>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Referências históricas são apenas registradas; não entram no
-                cálculo até que os critérios de confiabilidade sejam aprovados.
-              </p>
-            </div>
-          </div>
-        )}
 
         <LineCard
           title="Operações internas"
@@ -877,20 +751,11 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
             <CardTitle className="text-base">Calculadora</CardTitle>
           </CardHeader>
           <CardContent className="space-y-1.5 text-sm">
-            <Row
-              label="Materiais"
-              v={totals.materials}
-              pending={materialCalculationPending}
-            />
+            <Row label="Materiais" v={totals.materials} />
             <Row label="Operações internas" v={totals.operations} />
             <Row label="Serviços externos" v={totals.services} />
             <div className="border-t pt-1.5">
-              <Row
-                label="Subtotal"
-                v={totals.subtotal}
-                strong
-                pending={materialCalculationPending}
-              />
+              <Row label="Subtotal" v={totals.subtotal} strong />
             </div>
             <div className="mt-3 rounded-md border border-warning/40 bg-warning-soft/50 p-2.5 space-y-2">
               <div className="flex items-center justify-between">
@@ -917,30 +782,14 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
                       setAdj({ ...adjustments, [k]: Number(e.target.value) })
                     }
                   />
-                  <span className="w-24 text-right text-xs num">
-                    {materialCalculationPending ? "Pendente" : brl(v)}
-                  </span>
+                  <span className="w-24 text-right text-xs num">{brl(v)}</span>
                 </div>
               ))}
             </div>
             <div className="border-t pt-2">
-              <Row
-                label="Total"
-                v={totals.total}
-                strong
-                big
-                pending={materialCalculationPending}
-              />
+              <Row label="Total" v={totals.total} strong big />
             </div>
-            <Row
-              label={`Unitário (${quantity} pç)`}
-              v={totals.unit}
-              pending={materialCalculationPending}
-            />
-            <p className="pt-2 text-xs text-muted-foreground">
-              Estimativa provisória; fórmula e perdas aguardam validação de
-              negócio.
-            </p>
+            <Row label={`Unitário (${quantity} pç)`} v={totals.unit} />
           </CardContent>
         </Card>
 
@@ -1053,20 +902,18 @@ function Row({
   v,
   strong,
   big,
-  pending,
 }: {
   label: string;
   v: number;
   strong?: boolean;
   big?: boolean;
-  pending?: boolean;
 }) {
   return (
     <div
       className={`flex justify-between ${strong ? "font-semibold" : ""} ${big ? "text-lg" : ""}`}
     >
       <span>{label}</span>
-      <span className="num">{pending ? "Pendente" : brl(v)}</span>
+      <span className="num">{brl(v)}</span>
     </div>
   );
 }
@@ -1074,7 +921,6 @@ function Row({
 function LineCard({
   title,
   total,
-  totalLabel,
   onAdd,
   head,
   children,
@@ -1083,7 +929,6 @@ function LineCard({
 }: {
   title: string;
   total: number;
-  totalLabel?: string;
   onAdd: () => void;
   head: string[];
   children: ReactNode;
@@ -1095,9 +940,7 @@ function LineCard({
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
         <CardTitle className="text-base">{title}</CardTitle>
         <div className="flex items-center gap-3">
-          <span className="num text-sm font-medium">
-            {totalLabel ?? brl(total)}
-          </span>
+          <span className="num text-sm font-medium">{brl(total)}</span>
           <Button size="sm" variant="outline" onClick={onAdd}>
             <Plus />
             Adicionar

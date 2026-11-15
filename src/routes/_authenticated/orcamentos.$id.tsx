@@ -10,7 +10,6 @@ import { AuditList } from "@/components/audit-list";
 import {
   hourlyCostFromMonthlySalary,
   materialCost,
-  materialInputIssues,
   operationCost,
   operationHourlyCost,
   operationHours,
@@ -58,18 +57,10 @@ function Detail() {
     materials: q.materials.length,
     operations: q.operations.length,
   });
-  const materialIssues = materialInputIssues(q.materials);
-  const materialCalculationPending = materialIssues.length > 0;
   const name = (cid?: string | null) =>
     catalog.find((c) => c.id === cid)?.name ?? "—";
 
   async function setStatus(s: QuoteStatus) {
-    if (s === "aprovado" && materialCalculationPending) {
-      toast.error(
-        "Não é possível aprovar: complete os dados de consumo dos materiais.",
-      );
-      return;
-    }
     const { error } = await supabase
       .from("quotes")
       .update({ status: s })
@@ -132,23 +123,6 @@ function Detail() {
               </div>
             </div>
           )}
-          {materialCalculationPending && (
-            <div className="flex gap-3 rounded-md border border-warning/40 bg-warning-soft p-3 text-sm">
-              <AlertTriangle className="h-5 w-5 shrink-0 text-warning" />
-              <div>
-                <div className="font-medium">Custo de material incompleto</div>
-                <ul className="list-disc pl-4">
-                  {materialIssues.map((issue) => (
-                    <li key={issue}>{issue}</li>
-                  ))}
-                </ul>
-                <p className="mt-1">
-                  Totais não são apresentados como cálculo validado. Complete os
-                  dados no orçamento antes de aprová-lo.
-                </p>
-              </div>
-            </div>
-          )}
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Especificações</CardTitle>
@@ -172,32 +146,14 @@ function Detail() {
           </Card>
           <Table
             title="Materiais"
-            head={[
-              "Material",
-              "Dimensões brutas",
-              "Peso bruto (kg)",
-              "Custo/kg",
-              "Fator de uso",
-              "Qtd. peças",
-              "Referência histórica",
-              "Custo estimado",
-            ]}
+            head={["Material", "Qtd", "Custo unit.", "Subtotal"]}
             rows={q.materials.map((m) => [
               m.description,
-              m.raw_dimensions || "—",
-              m.weight_kg == null ? "—" : n2(m.weight_kg),
-              m.cost_per_kg == null ? "—" : brl(m.cost_per_kg),
-              m.use_factor == null ? "—" : n2(m.use_factor),
-              n2(m.qty),
-              m.history_inconsistent
-                ? `${m.history_reference || "Histórico"} — inconsistente`
-                : m.history_reference || "—",
-              materialInputIssues([m]).length > 0
-                ? "Pendente"
-                : brl(materialCost(m)),
+              `${n2(m.qty)} ${m.unit}`,
+              brl(m.unit_cost),
+              brl(materialCost(m)),
             ])}
             total={t.materials}
-            totalLabel={materialCalculationPending ? "Incompleto" : undefined}
           />
           <Table
             title="Operações internas"
@@ -270,11 +226,7 @@ function Detail() {
                   onChange={(e) => setStatus(e.target.value as QuoteStatus)}
                 >
                   {Object.entries(STATUS_LABEL).map(([k, v]) => (
-                    <option
-                      key={k}
-                      value={k}
-                      disabled={k === "aprovado" && materialCalculationPending}
-                    >
+                    <option key={k} value={k}>
                       {v}
                     </option>
                   ))}
@@ -292,17 +244,11 @@ function Detail() {
               <CardTitle className="text-base">Totais</CardTitle>
             </CardHeader>
             <CardContent className="space-y-1.5 text-sm">
-              <L
-                l="Materiais"
-                v={materialCalculationPending ? "Pendente" : brl(t.materials)}
-              />
+              <L l="Materiais" v={brl(t.materials)} />
               <L l="Operações" v={brl(t.operations)} />
               <L l="Serviços" v={brl(t.services)} />
               <div className="border-t pt-1.5 font-semibold">
-                <L
-                  l="Subtotal"
-                  v={materialCalculationPending ? "Pendente" : brl(t.subtotal)}
-                />
+                <L l="Subtotal" v={brl(t.subtotal)} />
               </div>
               <div className="flex items-center justify-between pt-1">
                 <span className="text-xs">Ajustes</span>
@@ -310,26 +256,20 @@ function Detail() {
               </div>
               <L
                 l={`Perda (${q.adjustments.perda_material_pct ?? 0}%)`}
-                v={materialCalculationPending ? "Pendente" : brl(t.perda)}
+                v={brl(t.perda)}
               />
               <L
                 l={`Margem (${q.adjustments.margem_pct ?? 0}%)`}
-                v={materialCalculationPending ? "Pendente" : brl(t.margem)}
+                v={brl(t.margem)}
               />
               <L
                 l={`Impostos (${q.adjustments.imposto_pct ?? 0}%)`}
-                v={materialCalculationPending ? "Pendente" : brl(t.imposto)}
+                v={brl(t.imposto)}
               />
               <div className="border-t pt-2 text-lg font-semibold">
-                <L
-                  l="Total"
-                  v={materialCalculationPending ? "Pendente" : brl(t.total)}
-                />
+                <L l="Total" v={brl(t.total)} />
               </div>
-              <L
-                l="Unitário"
-                v={materialCalculationPending ? "Pendente" : brl(t.unit)}
-              />
+              <L l="Unitário" v={brl(t.unit)} />
             </CardContent>
           </Card>
           <Card>
@@ -380,21 +320,17 @@ function Table({
   head,
   rows,
   total,
-  totalLabel,
 }: {
   title: string;
   head: string[];
   rows: string[][];
   total: number;
-  totalLabel?: string;
 }) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
         <CardTitle className="text-base">{title}</CardTitle>
-        <span className="num text-sm font-medium">
-          {totalLabel ?? brl(total)}
-        </span>
+        <span className="num text-sm font-medium">{brl(total)}</span>
       </CardHeader>
       <CardContent className="overflow-x-auto">
         {rows.length === 0 ? (

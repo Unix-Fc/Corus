@@ -7,12 +7,6 @@ export type MaterialLine = {
   unit: string;
   qty: number;
   unit_cost: number;
-  raw_dimensions?: string;
-  weight_kg?: number;
-  cost_per_kg?: number;
-  use_factor?: number;
-  history_reference?: string;
-  history_inconsistent?: boolean;
 };
 export type OperationLine = {
   machine_id?: string | null;
@@ -49,51 +43,7 @@ export function hourlyCostFromMonthlySalary(salary: number) {
 }
 
 export function materialCost(l: MaterialLine) {
-  const hasConsumptionInputs =
-    l.raw_dimensions !== undefined ||
-    l.weight_kg !== undefined ||
-    l.cost_per_kg !== undefined ||
-    l.use_factor !== undefined;
-  if (hasConsumptionInputs) {
-    if (
-      !hasText(l.raw_dimensions) ||
-      !isPositive(l.weight_kg) ||
-      !isPositive(l.cost_per_kg) ||
-      !isPositive(l.use_factor) ||
-      !isPositive(l.qty)
-    )
-      return 0;
-    return round2(l.weight_kg * l.cost_per_kg * l.use_factor * l.qty);
-  }
   return round2(num(l.qty) * num(l.unit_cost));
-}
-
-export function materialInputIssues(materials: MaterialLine[]) {
-  return materials.flatMap((material, index) => {
-    const item = index + 1;
-    const issues: string[] = [];
-    if (!hasText(material.description))
-      issues.push(`Material ${item}: identifique a matéria-prima.`);
-    if (!hasText(material.raw_dimensions))
-      issues.push(`Material ${item}: informe as dimensões brutas.`);
-    if (!isPositive(material.weight_kg))
-      issues.push(`Material ${item}: informe um peso bruto maior que zero.`);
-    if (!isPositive(material.cost_per_kg))
-      issues.push(`Material ${item}: informe um custo por kg maior que zero.`);
-    if (!isPositive(material.use_factor))
-      issues.push(`Material ${item}: informe um fator de uso maior que zero.`);
-    if (!isPositive(material.qty))
-      issues.push(`Material ${item}: informe uma quantidade maior que zero.`);
-    return issues;
-  });
-}
-
-function isPositive(value: number | undefined) {
-  return typeof value === "number" && Number.isFinite(value) && value > 0;
-}
-
-function hasText(value: string | undefined) {
-  return typeof value === "string" && value.trim().length > 0;
 }
 export function operationHours(l: OperationLine, quantity: number) {
   return num(l.setup_h) + (num(l.time_min) / 60) * num(quantity);
