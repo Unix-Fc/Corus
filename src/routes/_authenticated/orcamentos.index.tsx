@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Plus, Search, AlertTriangle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +18,13 @@ import {
   type QuoteStatus,
 } from "@/lib/data";
 import { useMe } from "@/hooks/use-me";
+import {
+  EMPTY_SEARCH,
+  filterQuotes,
+  hasFilters,
+  searchIssues,
+  type QuoteSearch,
+} from "@/lib/quote-search";
 
 export const Route = createFileRoute("/_authenticated/orcamentos/")({
   head: () => ({
@@ -30,21 +39,27 @@ export const Route = createFileRoute("/_authenticated/orcamentos/")({
 function List() {
   const { data: quotes = [], isLoading } = useQuotes();
   const { can } = useMe();
-  const [q, setQ] = useState("");
-  const [status, setStatus] = useState<QuoteStatus | "">("");
-  const term = q.toLowerCase();
-  const rows = quotes.filter(
-    (x) =>
-      (!status || x.status === status) &&
-      (!term ||
-        [
-          quoteCode(x.number),
-          x.part_name,
-          x.part_code,
-          x.project,
-          x.clients?.name,
-        ].some((v) => v?.toLowerCase().includes(term))),
-  );
+  // US-008 — critérios de pesquisa do histórico
+  const [s, setS] = useState<QuoteSearch>(EMPTY_SEARCH);
+  const set = (k: keyof QuoteSearch, v: string) => setS({ ...s, [k]: v });
+  // mesma consulta de responsáveis usada no Pipeline
+  const { data: people = [] } = useQuery({
+    queryKey: ["users-min"],
+    queryFn: async () =>
+      (
+        await supabase
+          .from("profiles")
+          .select("id, full_name, email")
+          .order("full_name")
+      ).data ?? [],
+  });
+  const personName = (id: string | null) => {
+    const p = people.find((x) => x.id === id);
+    return p ? (p.full_name ?? p.email ?? "—") : "—";
+  };
+  const issues = searchIssues(s);
+  const filtering = hasFilters(s);
+  const rows = filterQuotes(quotes, s);
   return (
     <>
       <PageHeader
@@ -69,14 +84,15 @@ function List() {
               <Input
                 className="pl-8"
                 placeholder="Buscar por nº, cliente, peça, código ou projeto"
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
+                value={s.term}
+                onChange={(e) => set("term", e.target.value)}
               />
             </div>
             <select
+              aria-label="Estado"
               className="h-9 rounded-md border border-input bg-card px-2 text-sm"
-              value={status}
-              onChange={(e) => setStatus(e.target.value as QuoteStatus | "")}
+              value={s.status}
+              onChange={(e) => set("status", e.target.value as QuoteStatus | "")}
             >
               <option value="">Todos os estados</option>
               {Object.entries(STATUS_LABEL).map(([k, v]) => (
@@ -86,6 +102,59 @@ function List() {
               ))}
             </select>
           </div>
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <label className="flex items-center gap-2 text-sm text-muted-foreground">
+              Criado de
+              <Input
+                type="date"
+                className="w-auto"
+                value={s.from}
+                onChange={(e) => set("from", e.target.value)}
+              />
+            </label>
+            <label className="flex items-center gap-2 text-sm text-muted-foreground">
+              até
+              <Input
+                type="date"
+                className="w-auto"
+                value={s.to}
+                onChange={(e) => set("to", e.target.value)}
+              />
+            </label>
+            {/* orçamentista só enxerga os próprios orçamentos (AC-040) */}
+            {can.viewAllQuotes && (
+              <select
+                aria-label="Responsável"
+                className="h-9 rounded-md border border-input bg-card px-2 text-sm"
+                value={s.owner}
+                onChange={(e) => set("owner", e.target.value)}
+              >
+                <option value="">Todos os responsáveis</option>
+                {people.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.full_name ?? p.email}
+                  </option>
+                ))}
+              </select>
+            )}
+            <div className="flex items-center gap-2 sm:ml-auto">
+              <span className="text-sm text-muted-foreground">
+                {rows.length} de {quotes.length} orçamento(s)
+              </span>
+              {filtering && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setS(EMPTY_SEARCH)}
+                >
+                  Limpar filtros
+                </Button>
+              )}
+            </div>
+          </div>
+          {issues.length > 0 && (
+            <p className="mb-4 text-sm text-destructive">{issues.join(" ")}</p>
+          )}
           <div className="overflow-x-auto">
             <table className="w-full min-w-[960px] text-sm">
               <thead>
@@ -95,6 +164,8 @@ function List() {
                   <th className="px-3">Projeto / Peça</th>
                   <th className="whitespace-nowrap px-3 text-right">Qtd</th>
                   <th className="whitespace-nowrap px-3">Estado</th>
+                  <th className="whitespace-nowrap px-3">Responsável</th>
+                  <th className="whitespace-nowrap px-3">Criado</th>
                   <th className="whitespace-nowrap px-3">Atualizado</th>
                   <th className="whitespace-nowrap pl-3 text-right">Total</th>
                 </tr>
@@ -103,7 +174,7 @@ function List() {
                 {isLoading && (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={9}
                       className="py-6 text-center text-muted-foreground"
                     >
                       Carregando…
@@ -113,10 +184,15 @@ function List() {
                 {!isLoading && rows.length === 0 && (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={9}
                       className="py-6 text-center text-muted-foreground"
                     >
-                      Nenhum orçamento encontrado.
+                      {/* AC-039: deixa claro por que a lista está vazia */}
+                      {issues.length > 0
+                        ? "Corrija o período informado para pesquisar."
+                        : filtering
+                          ? "Nenhum orçamento encontrado para os filtros informados."
+                          : "Nenhum orçamento salvo ainda."}
                     </td>
                   </tr>
                 )}
@@ -159,6 +235,12 @@ function List() {
                       </td>
                       <td className="whitespace-nowrap px-3">
                         <StatusBadge status={x.status} />
+                      </td>
+                      <td className="whitespace-nowrap px-3 text-xs">
+                        {personName(x.created_by)}
+                      </td>
+                      <td className="whitespace-nowrap px-3 text-xs text-muted-foreground">
+                        {dt(x.created_at)}
                       </td>
                       <td className="whitespace-nowrap px-3 text-xs text-muted-foreground">
                         {dt(x.updated_at)}
