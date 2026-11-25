@@ -182,10 +182,6 @@ function Detail() {
               "Origem",
               "Subtotal",
             ]}
-            rows={q.operations.map((o) => [
-              o.description,
-              name(o.machine_id),
-              name(o.tool_id),
             rows={orderedOperations(q.operations).map((o) => [
               `${o.sequence}. ${o.description}`,
               name(o.machine_id, o.machine_name_snapshot),
