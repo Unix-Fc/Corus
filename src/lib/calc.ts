@@ -115,10 +115,7 @@ export function computeQuote(input: {
   );
   const monthlyHours = input.monthlyHours ?? 220;
   const operations = round2(
-    input.operations.reduce(
-      (s, l) => s + operationCost(l, q, monthlyHours),
-      0,
-    ),
+    input.operations.reduce((s, l) => s + operationCost(l, q, monthlyHours), 0),
   );
   const services = round2(
     input.services.reduce((s, l) => s + materialCost(l), 0),
@@ -177,7 +174,6 @@ export type Pending = {
 
 export function technicalPendencies(
   specs: Specs,
-  ctx: { materials: number; operations: number },
   ctx: {
     materials: number;
     operations: number;

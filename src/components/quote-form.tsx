@@ -165,12 +165,12 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
           ? "rascunho"
           : "pendente";
     const clientNameSnapshot =
-      initial?.client_id === clientId && initial.client_name_snapshot
+      initial?.client_id === clientId && initial?.client_name_snapshot
         ? initial.client_name_snapshot
         : clientId
           ? (clients.find((client) => client.id === clientId)?.name ?? null)
           : initial?.client_id == null
-            ? (initial.client_name_snapshot ?? null)
+            ? (initial?.client_name_snapshot ?? null)
             : null;
     const payload = {
       client_id: clientId || null,
@@ -617,8 +617,8 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
                     {o.cargo_name_snapshot
                       ? `${o.cargo_name_snapshot} (excluído)`
                       : byKind("cargo").length
-                      ? "— Selecionar cargo —"
-                      : "Cadastre cargos"}
+                        ? "— Selecionar cargo —"
+                        : "Cadastre cargos"}
                   </option>
                   {catalog
                     .filter(

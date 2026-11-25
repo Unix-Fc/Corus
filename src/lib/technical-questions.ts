@@ -1,9 +1,20 @@
-import { queryOptions } from "@tanstack/react-query";
+import { infiniteQueryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 import type { AuthScope } from "@/hooks/use-auth-session";
 import { supabase } from "@/integrations/supabase/client";
+import type { Quote } from "./data";
 
 const maxLength = 4000;
+const pageSize = 25;
+
+function pageOf<T, Cursor>(records: T[], cursorFor: (row: T) => Cursor) {
+  const rows = records.slice(0, pageSize);
+  const last = rows.at(-1);
+  return {
+    rows,
+    next: records.length > pageSize && last ? cursorFor(last) : undefined,
+  };
+}
 
 function questionText(requiredMessage: string) {
   return z
@@ -15,8 +26,6 @@ function questionText(requiredMessage: string) {
     });
 }
 
-async function listTechnicalQuestions({ signal }: { signal: AbortSignal }) {
-  const { data, error } = await supabase
 type QuestionCursor = { created_at: string; id: string };
 
 async function listTechnicalQuestions({
@@ -37,7 +46,9 @@ async function listTechnicalQuestions({
     )
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
+    .limit(pageSize + 1)
     .abortSignal(signal);
+  if (ownerId && !isAdmin) query.eq("created_by", ownerId);
   if (pageParam) {
     // The id breaks ties between questions created at the same time.
     query.or(
@@ -46,15 +57,28 @@ async function listTechnicalQuestions({
   }
   const { data, error } = await query;
   if (error) throw error;
-  return data;
+  return pageOf(data, ({ created_at, id }) => ({ created_at, id }));
 }
 
-export function technicalQuestionsQuery(session: AuthScope | null | undefined) {
-  return queryOptions({
-    queryKey: ["technical-questions", session?.userId, session?.revision],
+export function technicalQuestionsQuery(
+  session: AuthScope | null | undefined,
+  isAdmin: boolean,
+) {
+  return infiniteQueryOptions({
+    queryKey: [
+      "technical-questions",
+      session?.userId,
+      session?.revision,
+      isAdmin,
+    ],
     enabled: Boolean(session),
     retry: false,
-    queryFn: listTechnicalQuestions,
+    queryFn: (context) =>
+      listTechnicalQuestions({
+        ...context,
+        ownerId: session?.userId,
+        isAdmin,
+      }),
     initialPageParam: null as QuestionCursor | null,
     getNextPageParam: (page) => page.next,
   });
@@ -62,7 +86,6 @@ export function technicalQuestionsQuery(session: AuthScope | null | undefined) {
 
 export type TechnicalQuestion = Awaited<
   ReturnType<typeof listTechnicalQuestions>
->[number];
 >["rows"][number];
 
 export type PendencyQuote = Pick<
