@@ -28,8 +28,15 @@ export const Route = createFileRoute(
 
 function Proposal() {
   const { id } = Route.useParams();
-  const { data: q } = useQuote(id);
+  const { data: q, isError } = useQuote(id);
   const { data: params = [] } = useParams();
+  if (isError)
+    return (
+      <p role="alert" className="text-destructive">
+        Não foi possível carregar o orçamento. Verifique o acesso ou recarregue
+        a página.
+      </p>
+    );
   if (!q) return <p className="text-muted-foreground">Carregando…</p>;
   if (q.status !== "aprovado") {
     return (

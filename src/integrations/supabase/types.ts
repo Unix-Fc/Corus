@@ -259,6 +259,47 @@ export type Database = {
           },
         ];
       };
+      technical_questions: {
+        Row: {
+          clarification: string | null;
+          created_at: string;
+          created_by: string;
+          description: string;
+          id: string;
+          quote_id: string;
+          status: Database["public"]["Enums"]["technical_question_status"];
+          updated_at: string;
+        };
+        Insert: {
+          clarification?: string | null;
+          created_at?: string;
+          created_by?: string;
+          description: string;
+          id?: string;
+          quote_id: string;
+          status?: Database["public"]["Enums"]["technical_question_status"];
+          updated_at?: string;
+        };
+        Update: {
+          clarification?: string | null;
+          created_at?: string;
+          created_by?: string;
+          description?: string;
+          id?: string;
+          quote_id?: string;
+          status?: Database["public"]["Enums"]["technical_question_status"];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "technical_questions_quote_id_fkey";
+            columns: ["quote_id"];
+            isOneToOne: false;
+            referencedRelation: "quotes";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       user_roles: {
         Row: {
           id: string;
@@ -303,6 +344,7 @@ export type Database = {
       catalog_kind: "material" | "maquina" | "ferramenta" | "cargo" | "servico";
       quote_status:
         "rascunho" | "pendente" | "em_negociacao" | "aprovado" | "reprovado";
+      technical_question_status: "aberta" | "esclarecida";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -439,6 +481,7 @@ export const Constants = {
         "aprovado",
         "reprovado",
       ],
+      technical_question_status: ["aberta", "esclarecida"],
     },
   },
 } as const;
