@@ -12,6 +12,9 @@ export type OperationLine = {
   machine_id?: string | null;
   tool_id?: string | null;
   cargo_id?: string | null;
+  machine_name_snapshot?: string | null;
+  tool_name_snapshot?: string | null;
+  cargo_name_snapshot?: string | null;
   description: string;
   salary_monthly?: number | null;
   setup_h: number;
@@ -38,8 +41,27 @@ export const round2 = (n: number) =>
   Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 const num = (n: unknown) => (Number.isFinite(Number(n)) ? Number(n) : 0);
 
-export function hourlyCostFromMonthlySalary(salary: number) {
-  return round2(Math.max(0, num(salary)) / 220);
+export function monthlyHoursForQuote(
+  savedSnapshot: number | null | undefined,
+  configuredHours: number,
+) {
+  if (
+    savedSnapshot != null &&
+    Number.isFinite(savedSnapshot) &&
+    savedSnapshot > 0
+  ) {
+    return savedSnapshot;
+  }
+  const configured = num(configuredHours);
+  return configured > 0 ? configured : 220;
+}
+
+export function hourlyCostFromMonthlySalary(
+  salary: number,
+  monthlyHours = 220,
+) {
+  const hours = num(monthlyHours);
+  return hours > 0 ? round2(Math.max(0, num(salary)) / hours) : 0;
 }
 
 export function materialCost(l: MaterialLine) {
@@ -48,15 +70,21 @@ export function materialCost(l: MaterialLine) {
 export function operationHours(l: OperationLine, quantity: number) {
   return num(l.setup_h) + (num(l.time_min) / 60) * num(quantity);
 }
-export function operationHourlyCost(l: OperationLine) {
+export function operationHourlyCost(l: OperationLine, monthlyHours = 220) {
   const salaryCost =
-    l.cargo_id && l.salary_monthly != null
-      ? hourlyCostFromMonthlySalary(l.salary_monthly)
+    l.salary_monthly != null
+      ? hourlyCostFromMonthlySalary(l.salary_monthly, monthlyHours)
       : 0;
   return round2(num(l.cost_hour) + salaryCost);
 }
-export function operationCost(l: OperationLine, quantity: number) {
-  return round2(operationHours(l, quantity) * operationHourlyCost(l));
+export function operationCost(
+  l: OperationLine,
+  quantity: number,
+  monthlyHours = 220,
+) {
+  return round2(
+    operationHours(l, quantity) * operationHourlyCost(l, monthlyHours),
+  );
 }
 
 export function computeQuote(input: {
@@ -65,13 +93,18 @@ export function computeQuote(input: {
   operations: OperationLine[];
   services: ServiceLine[];
   adjustments?: Adjustments;
+  monthlyHours?: number;
 }) {
   const q = num(input.quantity);
   const materials = round2(
     input.materials.reduce((s, l) => s + materialCost(l), 0),
   );
+  const monthlyHours = input.monthlyHours ?? 220;
   const operations = round2(
-    input.operations.reduce((s, l) => s + operationCost(l, q), 0),
+    input.operations.reduce(
+      (s, l) => s + operationCost(l, q, monthlyHours),
+      0,
+    ),
   );
   const services = round2(
     input.services.reduce((s, l) => s + materialCost(l), 0),
@@ -130,7 +163,16 @@ export type Pending = {
 
 export function technicalPendencies(
   specs: Specs,
+<<<<<<< Updated upstream
   ctx: { materials: number; operations: number },
+=======
+  ctx: {
+    materials: number;
+    operations: number;
+    operationLines?: OperationLine[];
+    monthlyHours?: number;
+  },
+>>>>>>> Stashed changes
 ): Pending[] {
   const p: Pending[] = [];
   if (!specs.desenho?.trim())
@@ -163,5 +205,39 @@ export function technicalPendencies(
       message: "Nenhuma operação interna lançada",
       severity: "media",
     });
+<<<<<<< Updated upstream
+=======
+  if (ctx.operationLines) {
+    const seenSequences = new Set<number>();
+    orderedOperations(ctx.operationLines).forEach((operation, index) => {
+      const sequence = operation.sequence ?? index + 1;
+      const field = `operacao-${sequence}`;
+      const issues: string[] = [];
+      if (!Number.isInteger(sequence) || sequence < 1)
+        issues.push("sequência inválida");
+      if (seenSequences.has(sequence)) issues.push("sequência duplicada");
+      seenSequences.add(sequence);
+      if (!operation.description.trim()) issues.push("descrição não informada");
+      if (!operation.machine_id) issues.push("máquina não selecionada");
+      if (!Number.isFinite(operation.setup_h) || operation.setup_h < 0)
+        issues.push("setup inválido");
+      if (!Number.isFinite(operation.time_min) || operation.time_min <= 0)
+        issues.push("tempo por peça deve ser maior que zero");
+      if (
+        !Number.isFinite(operation.cost_hour) ||
+        operation.cost_hour < 0 ||
+        operationHourlyCost(operation, ctx.monthlyHours) <= 0
+      )
+        issues.push("custo-hora aplicável não informado");
+      if (issues.length > 0) {
+        p.push({
+          field,
+          message: `Operação ${sequence}: ${issues.join(", ")}`,
+          severity: "alta",
+        });
+      }
+    });
+  }
+>>>>>>> Stashed changes
   return p;
 }

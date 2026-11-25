@@ -15,8 +15,25 @@ function questionText(requiredMessage: string) {
     });
 }
 
+<<<<<<< Updated upstream
 async function listTechnicalQuestions({ signal }: { signal: AbortSignal }) {
   const { data, error } = await supabase
+=======
+type QuestionCursor = { created_at: string; id: string };
+
+async function listTechnicalQuestions({
+  signal,
+  pageParam,
+  ownerId,
+  isAdmin,
+}: {
+  signal: AbortSignal;
+  pageParam: QuestionCursor | null;
+  ownerId: string | undefined;
+  isAdmin: boolean;
+}) {
+  const query = supabase
+>>>>>>> Stashed changes
     .from("technical_questions")
     .select(
       "id, quote_id, description, status, clarification, created_at, updated_at, quotes!inner(number, project, part_name)",
@@ -24,22 +41,107 @@ async function listTechnicalQuestions({ signal }: { signal: AbortSignal }) {
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
     .abortSignal(signal);
+<<<<<<< Updated upstream
+=======
+  if (ownerId && !isAdmin) query.eq("created_by", ownerId);
+  if (pageParam) {
+    // The id breaks ties between questions created at the same time.
+    query.or(
+      `created_at.lt.${pageParam.created_at},and(created_at.eq.${pageParam.created_at},id.lt.${pageParam.id})`,
+    );
+  }
+  const { data, error } = await query;
+>>>>>>> Stashed changes
   if (error) throw error;
   return data;
 }
 
+<<<<<<< Updated upstream
 export function technicalQuestionsQuery(session: AuthScope | null | undefined) {
   return queryOptions({
     queryKey: ["technical-questions", session?.userId, session?.revision],
     enabled: Boolean(session),
     retry: false,
     queryFn: listTechnicalQuestions,
+=======
+export function technicalQuestionsQuery(
+  session: AuthScope | null | undefined,
+  isAdmin: boolean,
+) {
+  return infiniteQueryOptions({
+    queryKey: [
+      "technical-questions",
+      session?.userId,
+      session?.revision,
+      isAdmin,
+    ],
+    enabled: Boolean(session),
+    retry: false,
+    queryFn: (context) =>
+      listTechnicalQuestions({
+        ...context,
+        ownerId: session?.userId,
+        isAdmin,
+      }),
+    initialPageParam: null as QuestionCursor | null,
+    getNextPageParam: (page) => page.next,
+>>>>>>> Stashed changes
   });
 }
 
 export type TechnicalQuestion = Awaited<
   ReturnType<typeof listTechnicalQuestions>
+<<<<<<< Updated upstream
 >[number];
+=======
+>["rows"][number];
+
+export type PendencyQuote = Pick<
+  Quote,
+  | "id"
+  | "number"
+  | "part_name"
+  | "project"
+  | "specs"
+  | "materials"
+  | "operations"
+  | "status"
+  | "clients"
+  | "client_name_snapshot"
+>;
+
+async function listPendencyQuotes({
+  signal,
+  pageParam,
+}: {
+  signal: AbortSignal;
+  pageParam: number | null;
+}) {
+  const query = supabase
+    .from("quotes")
+    .select(
+      "id, number, part_name, project, specs, materials, operations, status, client_name_snapshot, clients(name)",
+    )
+    .order("number", { ascending: false })
+    .limit(pageSize + 1)
+    .abortSignal(signal);
+  if (pageParam !== null) query.lt("number", pageParam);
+  const { data, error } = await query;
+  if (error) throw error;
+  return pageOf(data as unknown as PendencyQuote[], ({ number }) => number);
+}
+
+export function pendencyQuotesQuery(session: AuthScope | null | undefined) {
+  return infiniteQueryOptions({
+    queryKey: ["quotes", session?.userId, session?.revision, "pendency-pages"],
+    enabled: Boolean(session),
+    retry: false,
+    queryFn: listPendencyQuotes,
+    initialPageParam: null as number | null,
+    getNextPageParam: (page) => page.next,
+  });
+}
+>>>>>>> Stashed changes
 
 const newQuestion = z.object({
   quote_id: z.string().uuid("Selecione um orçamento."),

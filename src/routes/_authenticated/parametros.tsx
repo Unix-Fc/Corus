@@ -67,6 +67,10 @@ function ParamRow({ p, editable }: { p: CalcParam; editable: boolean }) {
   const [validated, setValidated] = useState(p.validated);
   const qc = useQueryClient();
   async function save() {
+    if (p.key === "horas_mensais_cargo" && (!Number.isFinite(v) || v <= 0)) {
+      toast.error("Informe uma quantidade de horas mensais maior que zero.");
+      return;
+    }
     const { error } = await supabase
       .from("calc_parameters")
       .update({ value: v, validated })
@@ -91,6 +95,8 @@ function ParamRow({ p, editable }: { p: CalcParam; editable: boolean }) {
         <div className="flex items-center gap-3">
           <Input
             type="number"
+            aria-label={`Valor de ${p.label}`}
+            min={p.key === "horas_mensais_cargo" ? "0.01" : undefined}
             step="0.01"
             disabled={!editable}
             className="w-24 num"

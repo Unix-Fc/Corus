@@ -6,6 +6,7 @@ import {
   brl,
   n2,
   quoteCode,
+  quoteClientName,
   quoteTotals,
   useParams,
   useQuote,
@@ -71,7 +72,7 @@ function Proposal() {
       g: "Usinagem / processo",
       d: o.description,
       qtd: `${n2(o.setup_h + (o.time_min / 60) * q.quantity)} h`,
-      v: operationCost(o, q.quantity),
+      v: operationCost(o, q.quantity, q.monthly_hours),
     })),
     ...q.services.map((m) => ({
       g: "Serviço externo",
@@ -119,7 +120,7 @@ function Proposal() {
             <div className="text-xs uppercase text-muted-foreground">
               Cliente
             </div>
-            <div className="font-medium">{q.clients?.name ?? "—"}</div>
+            <div className="font-medium">{quoteClientName(q)}</div>
           </div>
           <div>
             <div className="text-xs uppercase text-muted-foreground">

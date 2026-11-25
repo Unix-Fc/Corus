@@ -13,6 +13,7 @@ import { technicalPendencies } from "@/lib/calc";
 import {
   brl,
   quoteCode,
+  quoteClientName,
   quoteTotals,
   STATUS_LABEL,
   useQuotes,
@@ -234,7 +235,7 @@ function Dashboard() {
                         {quoteCode(q.number)}
                       </Link>
                     </td>
-                    <td>{q.clients?.name ?? "—"}</td>
+                    <td>{quoteClientName(q)}</td>
                     <td>
                       {q.part_name}{" "}
                       {p.length > 0 && (

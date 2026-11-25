@@ -10,6 +10,7 @@ import {
   brl,
   dt,
   quoteCode,
+  quoteClientName,
   quoteTotals,
   STATUS_LABEL,
   useQuotes,
@@ -49,7 +50,7 @@ function List() {
           x.part_name,
           x.part_code,
           x.project,
-          x.clients?.name,
+          quoteClientName(x),
         ].some((v) => v?.toLowerCase().includes(term))),
   );
   return (
@@ -146,7 +147,7 @@ function List() {
                           {quoteCode(x.number)}
                         </Link>
                       </td>
-                      <td className="px-3">{x.clients?.name ?? "—"}</td>
+                      <td className="px-3">{quoteClientName(x)}</td>
                       <td className="px-3">
                         <div className="font-medium">
                           {x.part_name}{" "}

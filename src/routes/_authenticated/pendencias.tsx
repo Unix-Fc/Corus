@@ -10,7 +10,11 @@ import { PageHeader, StatusBadge } from "@/components/status-badge";
 import { useAuthScope } from "@/hooks/use-auth-session";
 import { useMe } from "@/hooks/use-me";
 import { technicalPendencies } from "@/lib/calc";
+<<<<<<< Updated upstream
 import { dt, quoteCode, useQuotes, type Quote } from "@/lib/data";
+=======
+import { dt, quoteClientName, quoteCode } from "@/lib/data";
+>>>>>>> Stashed changes
 import {
   clarifyTechnicalQuestion,
   registerTechnicalQuestion,
@@ -66,7 +70,22 @@ function Pend() {
 function Pendencies({ canClarify }: { canClarify: boolean }) {
   const quotes = useQuotes();
   const scope = useAuthScope();
+<<<<<<< Updated upstream
   const questions = useQuery(technicalQuestionsQuery(scope));
+=======
+  const quotes = useInfiniteQuery(pendencyQuotesQuery(scope));
+  const questions = useInfiniteQuery(
+    technicalQuestionsQuery(scope, canClarify),
+  );
+  const quotesFailed = quotes.isError && !quotes.isFetchNextPageError;
+  const questionsFailed = questions.isError && !questions.isFetchNextPageError;
+  const quoteRows = quotesFailed
+    ? []
+    : (quotes.data?.pages.flatMap((page) => page.rows) ?? []);
+  const questionRows = questionsFailed
+    ? []
+    : (questions.data?.pages.flatMap((page) => page.rows) ?? []);
+>>>>>>> Stashed changes
 
   return (
     <>
@@ -100,7 +119,22 @@ function Pendencies({ canClarify }: { canClarify: boolean }) {
                 Nenhum orçamento disponível para registrar uma dúvida.
               </p>
             ) : (
+<<<<<<< Updated upstream
               <RegisterQuestion quotes={quotes.data} />
+=======
+              <RegisterQuestion quotes={quoteRows} isAdmin={canClarify}>
+                {quotes.hasNextPage && (
+                  <LoadMore
+                    label="orçamentos"
+                    failed={quotes.isFetchNextPageError}
+                    fetching={quotes.isFetching}
+                    onLoad={() =>
+                      void quotes.fetchNextPage({ cancelRefetch: false })
+                    }
+                  />
+                )}
+              </RegisterQuestion>
+>>>>>>> Stashed changes
             )}
           </CardContent>
         </Card>
@@ -149,11 +183,54 @@ function Pendencies({ canClarify }: { canClarify: boolean }) {
   );
 }
 
+<<<<<<< Updated upstream
 function RegisterQuestion({ quotes }: { quotes: Quote[] }) {
+=======
+function LoadMore({
+  label,
+  failed,
+  fetching,
+  onLoad,
+}: {
+  label: "orçamentos" | "dúvidas";
+  failed: boolean;
+  fetching: boolean;
+  onLoad: () => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      {failed && (
+        <p role="alert" className="text-sm text-destructive">
+          Não foi possível carregar mais {label}.
+        </p>
+      )}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={fetching}
+        onClick={onLoad}
+      >
+        {fetching ? `Carregando ${label}…` : `Carregar mais ${label}`}
+      </Button>
+    </div>
+  );
+}
+
+function RegisterQuestion({
+  quotes,
+  isAdmin,
+  children,
+}: {
+  quotes: PendencyQuote[];
+  isAdmin: boolean;
+  children?: ReactNode;
+}) {
+>>>>>>> Stashed changes
   const [quoteId, setQuoteId] = useState("");
   const [description, setDescription] = useState("");
   const qc = useQueryClient();
-  const { queryKey } = technicalQuestionsQuery(useAuthScope());
+  const { queryKey } = technicalQuestionsQuery(useAuthScope(), isAdmin);
   const registration = useMutation({
     mutationFn: async (input: { quote_id: string; description: string }) => {
       if (!quotes.some((quote) => quote.id === input.quote_id)) {
@@ -301,7 +378,7 @@ function ClarificationForm({ questionId }: { questionId: string }) {
   const fieldId = useId();
   const [clarification, setClarification] = useState("");
   const qc = useQueryClient();
-  const { queryKey } = technicalQuestionsQuery(useAuthScope());
+  const { queryKey } = technicalQuestionsQuery(useAuthScope(), true);
   const resolution = useMutation({
     mutationFn: (text: string) => clarifyTechnicalQuestion(questionId, text),
   });
@@ -411,7 +488,7 @@ function QuotePendencies({ quotes }: { quotes: Quote[] }) {
                     <td>
                       <div className="font-medium">{q.part_name}</div>
                       <div className="text-xs text-muted-foreground">
-                        {q.clients?.name}
+                        {quoteClientName(q)}
                       </div>
                     </td>
                     <td>

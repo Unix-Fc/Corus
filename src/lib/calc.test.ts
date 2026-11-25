@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   computeQuote,
   hourlyCostFromMonthlySalary,
+  monthlyHoursForQuote,
   operationCost,
   operationHourlyCost,
   productionEstimate,
@@ -42,6 +43,15 @@ describe("cálculo do orçamento", () => {
     expect(hourlyCostFromMonthlySalary(-100)).toBe(0);
   });
 
+  it("aplica o parâmetro de horas mensais sem alterar o padrão existente", () => {
+    expect(hourlyCostFromMonthlySalary(4400, 200)).toBe(22);
+    expect(hourlyCostFromMonthlySalary(4400, 0)).toBe(0);
+    expect(hourlyCostFromMonthlySalary(4400)).toBe(20);
+    expect(monthlyHoursForQuote(220, 180)).toBe(220);
+    expect(monthlyHoursForQuote(null, 180)).toBe(180);
+    expect(monthlyHoursForQuote(undefined, 0)).toBe(220);
+  });
+
   it("soma o custo-hora do cargo cadastrado ao custo da máquina", () => {
     const operation = {
       description: "Torno",
@@ -54,6 +64,11 @@ describe("cálculo do orçamento", () => {
     };
     expect(operationHourlyCost(operation)).toBe(30);
     expect(operationCost(operation, 1)).toBe(30);
+    expect(operationHourlyCost(operation, 200)).toBe(32);
+    expect(operationCost(operation, 1, 200)).toBe(32);
+    expect(
+      operationHourlyCost({ ...operation, cargo_id: null }, 200),
+    ).toBe(32);
   });
 
   it("aplica percentuais apenas quando configurados", () => {

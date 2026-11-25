@@ -66,8 +66,15 @@ export const dt = (s: string) =>
   });
 export const quoteCode = (n: number) => `ORC-${String(n).padStart(5, "0")}`;
 
+export function quoteClientName(
+  q: Pick<Quote, "client_name_snapshot" | "clients">,
+  fallback = "—",
+) {
+  return q.client_name_snapshot ?? q.clients?.name ?? fallback;
+}
+
 export function quoteTotals(q: Quote) {
-  return computeQuote(q);
+  return computeQuote({ ...q, monthlyHours: q.monthly_hours });
 }
 
 export function useQuotes() {

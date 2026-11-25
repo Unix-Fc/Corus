@@ -29,6 +29,30 @@
       "when": 1795525200000,
       "tag": "0003_technical_questions",
       "breakpoints": true
+<<<<<<< Updated upstream
+=======
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1795612800000,
+      "tag": "0004_material_price_history",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1795621075239,
+      "tag": "0005_technical_question_visibility",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1795625799542,
+      "tag": "0006_reference_deletion_and_monthly_hours",
+      "breakpoints": true
+>>>>>>> Stashed changes
     }
   ]
 }

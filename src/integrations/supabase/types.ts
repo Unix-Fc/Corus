@@ -158,6 +158,51 @@ export type Database = {
         };
         Relationships: [];
       };
+<<<<<<< Updated upstream
+=======
+      material_price_history: {
+        Row: {
+          created_at: string;
+          created_by: string;
+          id: string;
+          kind: Database["public"]["Enums"]["material_price_kind"];
+          material_id: string | null;
+          material_kind: Database["public"]["Enums"]["catalog_kind"];
+          material_name_snapshot: string;
+          occurred_on: string | null;
+          source: string;
+          unit: string;
+          unit_price: number;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string;
+          id?: string;
+          kind: Database["public"]["Enums"]["material_price_kind"];
+          material_id?: string | null;
+          material_kind?: Database["public"]["Enums"]["catalog_kind"];
+          material_name_snapshot?: string;
+          occurred_on?: string | null;
+          source: string;
+          unit: string;
+          unit_price: number;
+          updated_at?: string;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["material_price_history"]["Insert"]
+        >;
+        Relationships: [
+          {
+            foreignKeyName: "material_price_history_material_id_fkey";
+            columns: ["material_id"];
+            isOneToOne: false;
+            referencedRelation: "catalog_items";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+>>>>>>> Stashed changes
       profiles: {
         Row: {
           access_enabled: boolean;
@@ -186,12 +231,14 @@ export type Database = {
         Row: {
           adjustments: Json;
           client_id: string | null;
+          client_name_snapshot: string | null;
           created_at: string;
           created_by: string | null;
           id: string;
           lead_time_days: number | null;
           lead_time_manual: boolean;
           materials: Json;
+          monthly_hours: number;
           notes: string | null;
           number: number;
           operations: Json;
@@ -208,12 +255,14 @@ export type Database = {
         Insert: {
           adjustments?: Json;
           client_id?: string | null;
+          client_name_snapshot?: string | null;
           created_at?: string;
           created_by?: string | null;
           id?: string;
           lead_time_days?: number | null;
           lead_time_manual?: boolean;
           materials?: Json;
+          monthly_hours?: number;
           notes?: string | null;
           number?: number;
           operations?: Json;
@@ -230,12 +279,14 @@ export type Database = {
         Update: {
           adjustments?: Json;
           client_id?: string | null;
+          client_name_snapshot?: string | null;
           created_at?: string;
           created_by?: string | null;
           id?: string;
           lead_time_days?: number | null;
           lead_time_manual?: boolean;
           materials?: Json;
+          monthly_hours?: number;
           notes?: string | null;
           number?: number;
           operations?: Json;
