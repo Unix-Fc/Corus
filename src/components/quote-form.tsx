@@ -119,11 +119,7 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
   const pend = technicalPendencies(specs, {
     materials: materials.length,
     operations: operations.length,
-<<<<<<< Updated upstream
-=======
     operationLines: operations,
-    monthlyHours,
->>>>>>> Stashed changes
   });
 
   const byKind = (k: string) => catalog.filter((c) => c.kind === k && c.active);
@@ -462,11 +458,17 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
         <LineCard
           title="Operações internas"
           total={totals.operations}
-          tableClassName="min-w-[1080px]"
+          tableClassName="min-w-[1140px]"
           onAdd={() =>
             setOperations([
               ...operations,
               {
+                sequence:
+                  operations.reduce(
+                    (max, operation, index) =>
+                      Math.max(max, operation.sequence ?? index + 1),
+                    0,
+                  ) + 1,
                 machine_id: null,
                 tool_id: null,
                 cargo_id: null,
@@ -480,6 +482,7 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
             ])
           }
           head={[
+            "Seq.",
             "Máquina / descrição",
             "Ferramenta",
             "Cargo / salário",
@@ -489,13 +492,25 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
             "Subtotal",
             "",
           ]}
-<<<<<<< Updated upstream
           footer="O custo-hora do cargo é calculado com o salário mensal cadastrado ÷ 220 horas/mês e somado ao custo-hora da máquina. Encargos e benefícios não são incluídos."
-=======
->>>>>>> Stashed changes
         >
           {operations.map((o, i) => (
             <tr key={i} className="border-t align-top">
+              <td className="p-1.5 w-16">
+                <Input
+                  type="number"
+                  min="1"
+                  step="1"
+                  aria-label={`Sequência da operação ${i + 1}`}
+                  className={cell}
+                  value={o.sequence ?? i + 1}
+                  onChange={(e) =>
+                    upd(operations, setOperations, i, {
+                      sequence: Number(e.target.value),
+                    })
+                  }
+                />
+              </td>
               <td className="p-1.5 min-w-48 space-y-1">
                 <select
                   className={sel}

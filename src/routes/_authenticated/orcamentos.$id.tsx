@@ -13,6 +13,7 @@ import {
   operationCost,
   operationHourlyCost,
   operationHours,
+  orderedOperations,
   productionEstimate,
   technicalPendencies,
 } from "@/lib/calc";
@@ -64,6 +65,7 @@ function Detail() {
   const pend = technicalPendencies(q.specs, {
     materials: q.materials.length,
     operations: q.operations.length,
+    operationLines: q.operations,
   });
   const name = (cid?: string | null, snapshot?: string | null) =>
     catalog.find((c) => c.id === cid)?.name ?? snapshot ?? "—";
@@ -180,18 +182,15 @@ function Detail() {
               "Origem",
               "Subtotal",
             ]}
-<<<<<<< Updated upstream
             rows={q.operations.map((o) => [
               o.description,
               name(o.machine_id),
               name(o.tool_id),
-=======
             rows={orderedOperations(q.operations).map((o) => [
               `${o.sequence}. ${o.description}`,
               name(o.machine_id, o.machine_name_snapshot),
               name(o.tool_id, o.tool_name_snapshot),
               name(o.cargo_id, o.cargo_name_snapshot),
->>>>>>> Stashed changes
               o.salary_monthly == null ? "—" : brl(o.salary_monthly),
               brl(o.cost_hour),
               o.salary_monthly != null
@@ -237,7 +236,7 @@ function Detail() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center justify-between text-base">
-                Estado <StatusBadge status={q.status} />
+                Situação comercial <StatusBadge status={q.status} />
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">

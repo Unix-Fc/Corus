@@ -158,8 +158,6 @@ export type Database = {
         };
         Relationships: [];
       };
-<<<<<<< Updated upstream
-=======
       material_price_history: {
         Row: {
           created_at: string;
@@ -202,7 +200,6 @@ export type Database = {
           },
         ];
       };
->>>>>>> Stashed changes
       profiles: {
         Row: {
           access_enabled: boolean;
@@ -393,6 +390,7 @@ export type Database = {
     Enums: {
       app_role: "admin" | "orcamentista" | "gerente";
       catalog_kind: "material" | "maquina" | "ferramenta" | "cargo" | "servico";
+      material_price_kind: "compra" | "referencia";
       quote_status:
         "rascunho" | "pendente" | "em_negociacao" | "aprovado" | "reprovado";
       technical_question_status: "aberta" | "esclarecida";
@@ -525,6 +523,7 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "orcamentista", "gerente"],
       catalog_kind: ["material", "maquina", "ferramenta", "cargo", "servico"],
+      material_price_kind: ["compra", "referencia"],
       quote_status: [
         "rascunho",
         "pendente",

@@ -78,8 +78,6 @@ describe("Dúvidas técnicas", () => {
     currentUser.role = "admin";
   });
 
-<<<<<<< Updated upstream
-=======
   it("consulta dúvidas da página seguinte mesmo quando o horário de cadastro é igual", async () => {
     const createdAt = "2026-11-24T12:00:00+00:00";
     const records = Array.from({ length: 26 }, (_, index) => ({
@@ -174,7 +172,6 @@ describe("Dúvidas técnicas", () => {
     expect(posted).toHaveBeenCalledWith({ quote_id: recordId(1), description });
   });
 
->>>>>>> Stashed changes
   it("valida a descrição e atualiza a lista após registrar uma dúvida", async () => {
     currentUser.role = "orcamentista";
     let questions: (typeof openQuestion)[] = [];

@@ -9,6 +9,7 @@ export type MaterialLine = {
   unit_cost: number;
 };
 export type OperationLine = {
+  sequence?: number;
   machine_id?: string | null;
   tool_id?: string | null;
   cargo_id?: string | null;
@@ -87,6 +88,19 @@ export function operationCost(
   );
 }
 
+export function orderedOperations(operations: OperationLine[]) {
+  return operations
+    .map((operation, index) => ({
+      ...operation,
+      sequence: operation.sequence ?? index + 1,
+      originalIndex: index,
+    }))
+    .sort(
+      (a, b) => a.sequence - b.sequence || a.originalIndex - b.originalIndex,
+    )
+    .map(({ originalIndex: _originalIndex, ...operation }) => operation);
+}
+
 export function computeQuote(input: {
   quantity: number;
   materials: MaterialLine[];
@@ -163,16 +177,13 @@ export type Pending = {
 
 export function technicalPendencies(
   specs: Specs,
-<<<<<<< Updated upstream
   ctx: { materials: number; operations: number },
-=======
   ctx: {
     materials: number;
     operations: number;
     operationLines?: OperationLine[];
     monthlyHours?: number;
   },
->>>>>>> Stashed changes
 ): Pending[] {
   const p: Pending[] = [];
   if (!specs.desenho?.trim())
@@ -205,8 +216,6 @@ export function technicalPendencies(
       message: "Nenhuma operação interna lançada",
       severity: "media",
     });
-<<<<<<< Updated upstream
-=======
   if (ctx.operationLines) {
     const seenSequences = new Set<number>();
     orderedOperations(ctx.operationLines).forEach((operation, index) => {
@@ -238,6 +247,5 @@ export function technicalPendencies(
       }
     });
   }
->>>>>>> Stashed changes
   return p;
 }

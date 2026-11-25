@@ -10,15 +10,18 @@ import { PageHeader, StatusBadge } from "@/components/status-badge";
 import { useAuthScope } from "@/hooks/use-auth-session";
 import { useMe } from "@/hooks/use-me";
 import { technicalPendencies } from "@/lib/calc";
-<<<<<<< Updated upstream
 import { dt, quoteCode, useQuotes, type Quote } from "@/lib/data";
-=======
-import { dt, quoteClientName, quoteCode } from "@/lib/data";
->>>>>>> Stashed changes
 import {
   clarifyTechnicalQuestion,
   registerTechnicalQuestion,
   technicalQuestionsQuery,
+import { dt, quoteCode } from "@/lib/data";
+import {
+  clarifyTechnicalQuestion,
+  pendencyQuotesQuery,
+  registerTechnicalQuestion,
+  technicalQuestionsQuery,
+  type PendencyQuote,
   type TechnicalQuestion,
 } from "@/lib/technical-questions";
 
@@ -70,13 +73,7 @@ function Pend() {
 function Pendencies({ canClarify }: { canClarify: boolean }) {
   const quotes = useQuotes();
   const scope = useAuthScope();
-<<<<<<< Updated upstream
   const questions = useQuery(technicalQuestionsQuery(scope));
-=======
-  const quotes = useInfiniteQuery(pendencyQuotesQuery(scope));
-  const questions = useInfiniteQuery(
-    technicalQuestionsQuery(scope, canClarify),
-  );
   const quotesFailed = quotes.isError && !quotes.isFetchNextPageError;
   const questionsFailed = questions.isError && !questions.isFetchNextPageError;
   const quoteRows = quotesFailed
@@ -85,7 +82,6 @@ function Pendencies({ canClarify }: { canClarify: boolean }) {
   const questionRows = questionsFailed
     ? []
     : (questions.data?.pages.flatMap((page) => page.rows) ?? []);
->>>>>>> Stashed changes
 
   return (
     <>
@@ -119,10 +115,7 @@ function Pendencies({ canClarify }: { canClarify: boolean }) {
                 Nenhum orçamento disponível para registrar uma dúvida.
               </p>
             ) : (
-<<<<<<< Updated upstream
               <RegisterQuestion quotes={quotes.data} />
-=======
-              <RegisterQuestion quotes={quoteRows} isAdmin={canClarify}>
                 {quotes.hasNextPage && (
                   <LoadMore
                     label="orçamentos"
@@ -134,7 +127,6 @@ function Pendencies({ canClarify }: { canClarify: boolean }) {
                   />
                 )}
               </RegisterQuestion>
->>>>>>> Stashed changes
             )}
           </CardContent>
         </Card>
@@ -183,9 +175,7 @@ function Pendencies({ canClarify }: { canClarify: boolean }) {
   );
 }
 
-<<<<<<< Updated upstream
 function RegisterQuestion({ quotes }: { quotes: Quote[] }) {
-=======
 function LoadMore({
   label,
   failed,
@@ -226,7 +216,6 @@ function RegisterQuestion({
   isAdmin: boolean;
   children?: ReactNode;
 }) {
->>>>>>> Stashed changes
   const [quoteId, setQuoteId] = useState("");
   const [description, setDescription] = useState("");
   const qc = useQueryClient();
