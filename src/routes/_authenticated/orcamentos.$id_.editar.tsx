@@ -31,7 +31,7 @@ function Edit() {
         title={`Editar ${quoteCode(data.number)}`}
         subtitle={data.part_name}
       />
-      <QuoteForm initial={data} />
+      <QuoteForm key={data.id} initial={data} />
     </>
   );
 }

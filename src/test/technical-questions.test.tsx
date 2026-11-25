@@ -82,6 +82,40 @@ describe("Dúvidas técnicas", () => {
     currentUser.role = "admin";
   });
 
+  it("sinaliza uma operação incompleta na lista de pendências automáticas", async () => {
+    request.mockImplementation(async (input) =>
+      Response.json(
+        new URL(String(input)).pathname.endsWith("/quotes")
+          ? [
+              {
+                ...quote,
+                specs: { desenho: "D-1", tolerancia: "h7" },
+                materials: [
+                  { description: "Aço", unit: "kg", qty: 1, unit_cost: 20 },
+                ],
+                operations: [
+                  {
+                    description: "Tornear",
+                    setup_h: 0,
+                    time_min: 15,
+                    cost_hour: 50,
+                  },
+                ],
+              },
+            ]
+          : [],
+      ),
+    );
+
+    renderPendencies();
+    const automatic = await screen.findByRole("region", {
+      name: "Pendências identificadas automaticamente",
+    });
+    expect(
+      await within(automatic).findByText(/Operação 1: máquina não selecionada/),
+    ).toBeInTheDocument();
+  });
+
   it("consulta dúvidas da página seguinte mesmo quando o horário de cadastro é igual", async () => {
     const createdAt = "2026-11-24T12:00:00+00:00";
     const records = Array.from({ length: 26 }, (_, index) => ({

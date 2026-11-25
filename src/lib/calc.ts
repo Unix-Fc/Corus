@@ -60,7 +60,7 @@ export function operationCost(l: OperationLine, quantity: number) {
   return round2(operationHours(l, quantity) * operationHourlyCost(l));
 }
 
-export function orderedOperations(operations: OperationLine[]) {
+export function orderedOperations(operations: readonly OperationLine[]) {
   return operations
     .map((operation, index) => ({
       ...operation,
@@ -146,8 +146,7 @@ export function technicalPendencies(
   specs: Specs,
   ctx: {
     materials: number;
-    operations: number;
-    operationLines?: OperationLine[];
+    operations: readonly OperationLine[];
   },
 ): Pending[] {
   const p: Pending[] = [];
@@ -175,42 +174,43 @@ export function technicalPendencies(
       message: "Nenhum material lançado",
       severity: "media",
     });
-  if (ctx.operations === 0)
+  if (ctx.operations.length === 0)
     p.push({
       field: "operacoes",
       message: "Nenhuma operação interna lançada",
       severity: "media",
     });
-  if (ctx.operationLines) {
-    const seenSequences = new Set<number>();
-    orderedOperations(ctx.operationLines).forEach((operation, index) => {
-      const sequence = operation.sequence ?? index + 1;
-      const field = `operacao-${sequence}`;
-      const issues: string[] = [];
-      if (!Number.isInteger(sequence) || sequence < 1)
-        issues.push("sequência inválida");
-      if (seenSequences.has(sequence)) issues.push("sequência duplicada");
-      seenSequences.add(sequence);
-      if (!operation.description.trim()) issues.push("descrição não informada");
-      if (!operation.machine_id) issues.push("máquina não selecionada");
-      if (!Number.isFinite(operation.setup_h) || operation.setup_h < 0)
-        issues.push("setup inválido");
-      if (!Number.isFinite(operation.time_min) || operation.time_min <= 0)
-        issues.push("tempo por peça deve ser maior que zero");
-      if (
-        !Number.isFinite(operation.cost_hour) ||
-        operation.cost_hour < 0 ||
-        operationHourlyCost(operation) <= 0
-      )
-        issues.push("custo-hora aplicável não informado");
-      if (issues.length > 0) {
-        p.push({
-          field,
-          message: `Operação ${sequence}: ${issues.join(", ")}`,
-          severity: "alta",
-        });
-      }
-    });
-  }
+  const seenSequences = new Set<number>();
+  orderedOperations(ctx.operations).forEach((operation, index) => {
+    const sequence = operation.sequence;
+    const issues: string[] = [];
+    if (!Number.isInteger(sequence) || sequence < 1)
+      issues.push("sequência inválida");
+    if (seenSequences.has(sequence)) issues.push("sequência duplicada");
+    seenSequences.add(sequence);
+    if (
+      typeof operation.description !== "string" ||
+      !operation.description.trim()
+    )
+      issues.push("descrição não informada");
+    if (!operation.machine_id) issues.push("máquina não selecionada");
+    if (!Number.isFinite(operation.setup_h) || operation.setup_h < 0)
+      issues.push("setup inválido");
+    if (!Number.isFinite(operation.time_min) || operation.time_min <= 0)
+      issues.push("tempo por peça deve ser maior que zero");
+    if (
+      !Number.isFinite(operation.cost_hour) ||
+      operation.cost_hour < 0 ||
+      operationHourlyCost(operation) <= 0
+    )
+      issues.push("custo-hora aplicável não informado");
+    if (issues.length > 0) {
+      p.push({
+        field: `operacao-${index + 1}`,
+        message: `Operação ${sequence}: ${issues.join(", ")}`,
+        severity: "alta",
+      });
+    }
+  });
   return p;
 }

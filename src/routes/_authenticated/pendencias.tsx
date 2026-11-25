@@ -446,7 +446,7 @@ function QuotePendencies({
       q,
       p: technicalPendencies(q.specs, {
         materials: q.materials.length,
-        operations: q.operations.length,
+        operations: q.operations,
       }),
     }))
     .filter((r) => r.p.length > 0);
@@ -457,8 +457,8 @@ function QuotePendencies({
         Pendências identificadas automaticamente
       </h2>
       <p className="text-sm text-muted-foreground">
-        Desenho, tolerância, tratamento térmico e itens ausentes. Não bloqueiam
-        rascunhos.
+        Desenho, tolerância, tratamento térmico, materiais e operações. Não
+        bloqueiam rascunhos.
       </p>
       {hasMore && (
         <p className="text-sm text-muted-foreground">

@@ -71,7 +71,10 @@ describe("cálculo do orçamento", () => {
   it("aponta tratamento térmico ausente sem bloquear", () => {
     const p = technicalPendencies(
       { desenho: "D1", tolerancia: "h7", tratamento_termico_aplicavel: true },
-      { materials: 1, operations: 1 },
+      {
+        materials: 1,
+        operations: [{ ...base.operations[0]!, machine_id: "maquina-1" }],
+      },
     );
     expect(p.map((x) => x.field)).toEqual(["tratamento_termico"]);
   });
@@ -98,8 +101,7 @@ describe("cálculo do orçamento", () => {
       { desenho: "D1", tolerancia: "h7" },
       {
         materials: 1,
-        operations: 1,
-        operationLines: [
+        operations: [
           {
             description: "",
             setup_h: -1,

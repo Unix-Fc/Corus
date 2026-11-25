@@ -7,6 +7,7 @@ import { Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/status-badge";
+import { useAuthScope } from "@/hooks/use-auth-session";
 import {
   brl,
   quoteCode,
@@ -37,18 +38,25 @@ const COLS: QuoteStatus[] = [
 function Pipeline() {
   const { data: all = [], isLoading, isError } = useQuotes();
   const [owner, setOwner] = useState("");
-  const { data: people = [] } = useQuery({
-    queryKey: ["users-min"],
-    queryFn: async () =>
-      (
-        await supabase
-          .from("profiles")
-          .select("id, full_name, email")
-          .order("full_name")
-      ).data ?? [],
-  });
-  const quotes = owner ? all.filter((q) => q.created_by === owner) : all;
   const { can } = useMe();
+  const scope = useAuthScope();
+  const people = useQuery({
+    queryKey: ["users", scope?.userId, scope?.revision, "pipeline"],
+    enabled: can.viewAllQuotes,
+    queryFn: async ({ signal }) => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .order("full_name")
+        .abortSignal(signal);
+      if (error) throw error;
+      return data;
+    },
+  });
+  const quotes =
+    can.viewAllQuotes && owner && people.isSuccess
+      ? all.filter((q) => q.created_by === owner)
+      : all;
   const qc = useQueryClient();
   if (isError) {
     return (
@@ -91,19 +99,27 @@ function Pipeline() {
             <select
               aria-label="Orçamentista"
               className="h-9 rounded-md border border-input bg-card px-2 text-sm"
-              value={owner}
+              value={people.isSuccess ? owner : ""}
+              disabled={!people.isSuccess}
               onChange={(e) => setOwner(e.target.value)}
             >
               <option value="">Todos os orçamentistas</option>
-              {people.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.full_name ?? p.email}
-                </option>
-              ))}
+              {people.isSuccess &&
+                people.data.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.full_name ?? p.email}
+                  </option>
+                ))}
             </select>
           ) : undefined
         }
       />
+      {can.viewAllQuotes && people.isError && (
+        <p role="alert" className="mb-3 text-sm text-destructive">
+          O filtro por orçamentista está indisponível. Recarregue a página para
+          tentar novamente.
+        </p>
+      )}
       <div className="mb-4 flex gap-2 rounded-md border border-warning/40 bg-warning-soft p-3 text-sm">
         <Info className="h-4 w-4 shrink-0 text-warning" />
         Estados provisórios (Pendente, Em negociação, Aprovado, Reprovado). As
