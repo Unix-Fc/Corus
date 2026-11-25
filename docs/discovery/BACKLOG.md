@@ -53,6 +53,8 @@ A prioridade acima é de **validação no Discovery**, não uma decisão definit
 
 **Prioridade:** P0 para validar parâmetros que influenciam custo e tempo. **Valor:** consistência e reutilização de referências.
 
+**Execução da história US-007 (namespace da issue):** a tela de Cadastros mantém clientes, materiais, máquinas, ferramentas, cargos/salários e serviços externos, com edição restrita a administradores e histórico de alterações por registro. Antes de salvar, o formulário valida campos obrigatórios (código, descrição, unidade e custo) e rejeita valores inválidos: custo igual ou menor que zero, setup, potência ou salário negativos e código repetido no mesmo grupo; para clientes, exige razão social e confere o formato de CNPJ (14 dígitos) e e-mail quando informados. Máquinas passam a registrar tipo e potência (kW), além do setup padrão. Ao editar um item, detalhes já existentes que a tela não exibe (por exemplo, a norma de um material) são preservados. A exigência de custo maior que zero é uma hipótese de implementação; campos definitivos por cadastro, desativação de registros e vigência de preços, salários e custos continuam pendentes em OPEN-008.
+
 ### Grupo funcional — clientes, projetos e peças — Cadastro de clientes, projetos e peças
 **Requisitos:** FR-009, FR-005. **Objetivos:** OBJ-001, OBJ-005. **Atores:** ACT-002, ACT-007.
 

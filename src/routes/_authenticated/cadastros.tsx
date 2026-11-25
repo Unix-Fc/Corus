@@ -35,6 +35,7 @@ import {
 } from "@/lib/data";
 import { useMe } from "@/hooks/use-me";
 import { requireAdminRoute } from "@/lib/admin-route";
+import { cadastroIssues } from "@/lib/catalog-validation";
 
 export const Route = createFileRoute("/_authenticated/cadastros")({
   beforeLoad: requireAdminRoute,
@@ -57,7 +58,13 @@ type Form = Record<string, string | number | boolean>;
 function Cadastros() {
   const [tab, setTab] = useState<Tab>("clientes");
   const [q, setQ] = useState("");
-  const [edit, setEdit] = useState<{ id?: string; f: Form } | null>(null);
+  // `details` guarda os detalhes originais do item em edição, para não
+  // perder campos que a tela não mostra (ex.: "norma" dos materiais).
+  const [edit, setEdit] = useState<{
+    id?: string;
+    f: Form;
+    details?: Record<string, unknown>;
+  } | null>(null);
   const [hist, setHist] = useState<{
     entity: string;
     id: string;
@@ -75,8 +82,12 @@ function Cadastros() {
   async function save() {
     if (!edit) return;
     const f = edit.f;
-    if (!String(f["name"] ?? "").trim()) {
-      toast.error("Informe o nome.");
+    // US-007 — AC-032/AC-033: campos obrigatórios e valores inválidos
+    const issues = cadastroIssues(tab, f, catalog, edit.id);
+    if (issues.length > 0) {
+      toast.error("Corrija os campos antes de salvar", {
+        description: issues.join(" "),
+      });
       return;
     }
     let error;
@@ -94,19 +105,25 @@ function Cadastros() {
         ? await supabase.from("clients").update(p).eq("id", edit.id)
         : await supabase.from("clients").insert(p));
     } else {
-      const details =
+      const specific =
         tab === "maquina"
-          ? { setup_padrao_h: Number(f["setup"] ?? 0) }
+          ? {
+              setup_padrao_h: Number(f["setup"] ?? 0),
+              tipo: String(f["tipo"] ?? "").trim(),
+              potencia_kw: Number(f["potencia"] ?? 0),
+            }
           : tab === "cargo"
             ? { salario_mensal: Number(f["salario"] ?? 0) }
             : tab === "servico"
               ? { fornecedor: String(f["fornecedor"] ?? "") }
               : {};
+      // mantém os detalhes que já existiam e sobrescreve só os editados
+      const details = { ...(edit.details ?? {}), ...specific };
       const p = {
         kind: tab,
-        code: String(f["code"] ?? ""),
-        name: String(f["name"]),
-        unit: String(f["unit"] ?? ""),
+        code: String(f["code"] ?? "").trim(),
+        name: String(f["name"]).trim(),
+        unit: String(f["unit"] ?? "").trim(),
         unit_cost: Number(f["unit_cost"] ?? 0),
         active: !!f["active"],
         details,
@@ -275,7 +292,15 @@ function Cadastros() {
                           </td>
                           <td className="text-xs text-muted-foreground">
                             {d["setup_padrao_h"] !== undefined
-                              ? `Setup padrão ${d["setup_padrao_h"]} h`
+                              ? [
+                                  d["tipo"],
+                                  d["potencia_kw"]
+                                    ? `${d["potencia_kw"]} kW`
+                                    : "",
+                                  `Setup padrão ${d["setup_padrao_h"]} h`,
+                                ]
+                                  .filter(Boolean)
+                                  .join(" · ")
                               : d["salario_mensal"]
                                 ? `Salário ${brl(Number(d["salario_mensal"]))}`
                                 : (d["fornecedor"] ?? d["norma"] ?? "")}
@@ -304,6 +329,7 @@ function Cadastros() {
                                 onClick={() =>
                                   setEdit({
                                     id: c.id,
+                                    details: d,
                                     f: {
                                       code: c.code ?? "",
                                       name: c.name,
@@ -311,6 +337,8 @@ function Cadastros() {
                                       unit_cost: Number(c.unit_cost),
                                       active: c.active,
                                       setup: Number(d["setup_padrao_h"] ?? 0),
+                                      tipo: String(d["tipo"] ?? ""),
+                                      potencia: Number(d["potencia_kw"] ?? 0),
                                       salario: Number(d["salario_mensal"] ?? 0),
                                       fornecedor: String(d["fornecedor"] ?? ""),
                                     },
@@ -363,13 +391,23 @@ function Cadastros() {
                     num
                   />
                   {tab === "maquina" && (
-                    <F
-                      l="Setup padrão (h)"
-                      k="setup"
-                      f={edit.f}
-                      set={set}
-                      num
-                    />
+                    <>
+                      <F
+                        l="Setup padrão (h)"
+                        k="setup"
+                        f={edit.f}
+                        set={set}
+                        num
+                      />
+                      <F l="Tipo de máquina" k="tipo" f={edit.f} set={set} />
+                      <F
+                        l="Potência (kW)"
+                        k="potencia"
+                        f={edit.f}
+                        set={set}
+                        num
+                      />
+                    </>
                   )}
                   {tab === "cargo" && (
                     <>
