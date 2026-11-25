@@ -7,6 +7,7 @@ describe("permissões", () => {
     expect(p.changeStatus).toBe(false);
     expect(p.viewAudit).toBe(false);
     expect(p.viewAllQuotes).toBe(false);
+    expect(p.printProposals).toBe(false);
   });
   it("só admin altera parâmetros, perfis e exclui", () => {
     const o = permissionsFor(["orcamentista"]);
@@ -25,7 +26,8 @@ describe("permissões", () => {
       a.deleteUsers,
       a.changeStatus,
       a.viewAudit,
-    ]).toEqual([true, true, true, true, true, true]);
+      a.printProposals,
+    ]).toEqual([true, true, true, true, true, true, true]);
   });
   it("administrador não precisa acumular o perfil de orçamentista", () => {
     expect(permissionsFor(["admin", "orcamentista"])).toEqual(

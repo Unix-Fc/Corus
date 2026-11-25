@@ -1,10 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Route } from "@/routes/_authenticated/orcamentos.$id";
 
-const { quote } = vi.hoisted(() => ({
+const { quote, current } = vi.hoisted(() => ({
+  current: { role: "orcamentista" },
   quote: {
     id: "quote-1",
     number: 1,
@@ -47,7 +48,7 @@ vi.mock("@tanstack/react-router", () => ({
     options,
     useParams: () => ({ id: "quote-1" }),
   }),
-  Link: ({ children }: { children: ReactNode }) => children,
+  Link: ({ children }: { children: ReactNode }) => <a>{children}</a>,
 }));
 
 vi.mock("@/integrations/supabase/client", () => ({
@@ -56,7 +57,11 @@ vi.mock("@/integrations/supabase/client", () => ({
 
 vi.mock("@/hooks/use-me", () => ({
   useMe: () => ({
-    can: { changeStatus: false, editQuotes: false },
+    can: {
+      changeStatus: false,
+      editQuotes: false,
+      printProposals: current.role === "admin",
+    },
   }),
 }));
 
@@ -102,6 +107,11 @@ vi.mock("@/lib/calc", () => ({
 }));
 
 describe("quote detail layout", () => {
+  beforeEach(() => {
+    current.role = "orcamentista";
+    quote.status = "rascunho";
+  });
+
   it("contains wide tables inside their card instead of the page layout", () => {
     const Page = Route.options.component!;
     render(
@@ -119,5 +129,39 @@ describe("quote detail layout", () => {
     expect(tableRegion.closest(".grid.min-w-0")).toHaveClass(
       "lg:grid-cols-[minmax(0,1fr)_320px]",
     );
+  });
+
+  it("shows both print options to an administrator on an approved quote", () => {
+    current.role = "admin";
+    quote.status = "aprovado";
+    const Page = Route.options.component!;
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <Page />
+      </QueryClientProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Proposta" }));
+
+    const chooser = screen.getByRole("dialog");
+    expect(chooser).toHaveTextContent("Ordem de produção");
+    expect(chooser).toHaveTextContent("Proposta para o cliente");
+  });
+
+  it("does not show proposal actions to a non-administrator", () => {
+    quote.status = "aprovado";
+    const Page = Route.options.component!;
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <Page />
+      </QueryClientProvider>,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "Proposta" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Proposta após aprovação" }),
+    ).not.toBeInTheDocument();
   });
 });

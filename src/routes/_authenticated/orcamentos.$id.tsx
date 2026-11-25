@@ -5,6 +5,14 @@ import { Pencil, Printer, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { PageHeader, PendingTag, StatusBadge } from "@/components/status-badge";
 import { AuditList } from "@/components/audit-list";
 import {
@@ -99,22 +107,53 @@ function Detail() {
                 </Link>
               </Button>
             )}
-            {q.status === "aprovado" ? (
-              <Button asChild>
-                <Link to="/orcamentos/$id/proposta" params={{ id }}>
+            {can.printProposals &&
+              (q.status === "aprovado" ? (
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Printer />
+                      Proposta
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Escolha o documento</DialogTitle>
+                      <DialogDescription>
+                        Selecione o tipo de documento para este orçamento.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <Button variant="outline" className="h-auto py-3" asChild>
+                        <Link
+                          to="/orcamentos/$id/proposta"
+                          params={{ id }}
+                          search={{ tipo: "ordem" }}
+                        >
+                          Ordem de produção
+                        </Link>
+                      </Button>
+                      <Button variant="outline" className="h-auto py-3" asChild>
+                        <Link
+                          to="/orcamentos/$id/proposta"
+                          params={{ id }}
+                          search={{ tipo: "cliente" }}
+                        >
+                          Proposta para o cliente
+                        </Link>
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              ) : (
+                <Button
+                  disabled
+                  title="A proposta só pode ser impressa após a aprovação"
+                >
                   <Printer />
-                  Proposta
-                </Link>
-              </Button>
-            ) : (
-              <Button
-                disabled
-                title="A proposta só pode ser impressa após a aprovação"
-              >
-                <Printer />
-                Proposta após aprovação
-              </Button>
-            )}
+                  Proposta após aprovação
+                </Button>
+              ))}
           </>
         }
       />

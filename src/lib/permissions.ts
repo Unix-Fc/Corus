@@ -15,5 +15,6 @@ export function permissionsFor(roles: readonly Role[]) {
     manageUsers: admin,
     deleteQuotes: admin,
     deleteUsers: admin,
+    printProposals: admin,
   };
 }
