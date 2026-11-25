@@ -10,6 +10,7 @@ export function useMe() {
     queryKey: ["me", session?.userId, session?.revision],
     enabled: Boolean(session),
     retry: false,
+    staleTime: 0,
     queryFn: async ({ signal }) => {
       const { data, error } = await supabase.auth.getUser();
       if (error) throw error;

@@ -9,7 +9,6 @@ import {
   History,
   PackageSearch,
   Users,
-  Factory,
 } from "lucide-react";
 import {
   Sidebar,
@@ -59,7 +58,7 @@ const groups = [
   items: {
     title: string;
     url: string;
-    icon: typeof Factory;
+    icon: typeof LayoutDashboard;
     adminOnly?: boolean;
   }[];
 }[];
@@ -71,12 +70,15 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader>
         <div className="flex items-center gap-2 px-2 py-2">
-          <Factory className="h-5 w-5 shrink-0 text-sidebar-primary" />
-          <div className="leading-tight group-data-[collapsible=icon]:hidden">
-            <div className="text-sm font-bold tracking-widest text-sidebar-accent-foreground">
-              CORUS
+          <div className="leading-tight">
+            <img
+              src="/corus-logo.png"
+              alt="Corus"
+              className="h-8 w-32 shrink-0 rounded-sm object-cover object-[center_42%] group-data-[collapsible=icon]:w-8"
+            />
+            <div className="mt-1 text-[11px] opacity-70 group-data-[collapsible=icon]:hidden">
+              Orçamentos industriais
             </div>
-            <div className="text-[11px] opacity-70">Orçamentos industriais</div>
           </div>
         </div>
       </SidebarHeader>
