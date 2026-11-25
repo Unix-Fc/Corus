@@ -214,6 +214,8 @@ A prioridade acima é de **validação no Discovery**, não uma decisão definit
 
 **Prioridade:** P1. **Valor:** gestão, continuidade e rastreabilidade.
 
+**Aplicação de US-009:** a implementação usa os estados comerciais do protótipo (Pendente, Em negociação, Aprovado e Reprovado); Rascunho permanece como estado anterior ao pipeline. Somente administradores podem alterar a situação, sem impor transições ainda não aprovadas. A alteração é registrada na auditoria e o criador do orçamento pode consultar seu histórico; a auditoria geral permanece restrita a administradores. Situação comercial não representa execução da produção. A validação final do catálogo e das transições continua em OPEN-018/022.
+
 ### Grupo funcional — documento de orçamento — Documento de orçamento
 **Requisitos:** FR-010. **Objetivos:** OBJ-001, OBJ-002. **Atores:** ACT-002, ACT-007.
 
