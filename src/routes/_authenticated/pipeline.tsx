@@ -106,10 +106,10 @@ function Pipeline() {
       />
       <div className="mb-4 flex gap-2 rounded-md border border-warning/40 bg-warning-soft p-3 text-sm">
         <Info className="h-4 w-4 shrink-0 text-warning" />
-        Estados provisórios (Pendente, Em negociação, Aprovado, Reprovado). As
-        regras de transição ainda dependem de validação de negócio — somente
-        Administradores movem orçamentos, e cada movimento fica registrado na
-        auditoria.
+        Pipeline comercial (Pendente, Em negociação, Aprovado, Reprovado), sem
+        representar a execução da produção. Estados e transições ainda dependem
+        de validação de negócio — somente Administradores movem orçamentos, e
+        cada movimento fica registrado na auditoria.
       </div>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {COLS.map((s) => {

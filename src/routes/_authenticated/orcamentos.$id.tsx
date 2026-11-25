@@ -224,7 +224,7 @@ function Detail() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center justify-between text-base">
-                Estado <StatusBadge status={q.status} />
+                Situação comercial <StatusBadge status={q.status} />
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
@@ -243,8 +243,8 @@ function Detail() {
               )}
               <p className="flex gap-1.5 text-xs text-muted-foreground">
                 <Info className="h-3.5 w-3.5 shrink-0" />
-                Estados provisórios: transições ainda dependem de validação de
-                negócio.
+                Situação comercial; não representa o andamento da produção.
+                Estados e transições ainda dependem de validação de negócio.
               </p>
             </CardContent>
           </Card>
