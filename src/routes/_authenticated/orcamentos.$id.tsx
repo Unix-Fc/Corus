@@ -13,6 +13,7 @@ import {
   operationCost,
   operationHourlyCost,
   operationHours,
+  orderedOperations,
   productionEstimate,
   technicalPendencies,
 } from "@/lib/calc";
@@ -56,6 +57,7 @@ function Detail() {
   const pend = technicalPendencies(q.specs, {
     materials: q.materials.length,
     operations: q.operations.length,
+    operationLines: q.operations,
   });
   const name = (cid?: string | null) =>
     catalog.find((c) => c.id === cid)?.name ?? "—";
@@ -171,8 +173,8 @@ function Detail() {
               "Origem",
               "Subtotal",
             ]}
-            rows={q.operations.map((o) => [
-              o.description,
+            rows={orderedOperations(q.operations).map((o) => [
+              `${o.sequence}. ${o.description}`,
               name(o.machine_id),
               name(o.tool_id),
               o.salary_monthly == null ? "—" : brl(o.salary_monthly),
