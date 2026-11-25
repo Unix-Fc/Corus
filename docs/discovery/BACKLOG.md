@@ -214,6 +214,8 @@ A prioridade acima é de **validação no Discovery**, não uma decisão definit
 
 **Prioridade:** P1. **Valor:** gestão, continuidade e rastreabilidade.
 
+**Execução da história US-008 (namespace da issue):** a lista de orçamentos funciona como histórico pesquisável: busca por número, cliente, peça, código ou projeto, filtro por estado e por período de criação e, para administradores, filtro por responsável. Os resultados mostram cliente, projeto/peça, quantidade, estado, responsável, datas de criação e atualização e custo total, com contagem de resultados e opção de limpar filtros. Período com data inicial posterior à final é sinalizado e não é pesquisado. Lista vazia diferencia "nenhum orçamento salvo" de "nenhum resultado para os filtros". O acesso continua restrito pelas políticas do banco: orçamentistas consultam apenas os próprios orçamentos e administradores consultam todos. Retenção, versões/revisões e informações por perfil continuam pendentes em OPEN-009 e OPEN-022.
+
 ### Grupo funcional — documento de orçamento — Documento de orçamento
 **Requisitos:** FR-010. **Objetivos:** OBJ-001, OBJ-002. **Atores:** ACT-002, ACT-007.
 
