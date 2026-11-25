@@ -40,13 +40,19 @@ import { quoteIdentityIssues } from "@/lib/quote-validation";
 const sel =
   "h-9 w-full rounded-md border border-input bg-card px-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring";
 const cell = "h-8 text-sm num";
+const maxQuoteQuantity = 2_147_483_647;
 
-export function QuoteForm({ initial }: { initial?: Quote }) {
+export function QuoteForm({ initial: loadedQuote }: { initial?: Quote }) {
+  const [initial] = useState(loadedQuote);
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const { data: clients = [] } = useClients();
-  const { data: catalog = [] } = useCatalog();
-  const { data: params = [] } = useParams();
+  const clientsQuery = useClients();
+  const catalogQuery = useCatalog();
+  const paramsQuery = useParams();
+  const meQuery = useMe();
+  const { data: clients = [] } = clientsQuery;
+  const { data: catalog = [] } = catalogQuery;
+  const { data: params = [] } = paramsQuery;
   const p = (k: string) => Number(params.find((x) => x.key === k)?.value ?? 0);
 
   const [clientId, setClientId] = useState(initial?.client_id ?? "");
@@ -78,11 +84,18 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [saving, setSaving] = useState(false);
 
-  const adjustments: Adjustments = adj ?? {
-    perda_material_pct: p("perda_material_pct"),
-    margem_pct: p("margem_pct"),
-    imposto_pct: p("imposto_pct"),
-  };
+  const materialLoss = p("perda_material_pct");
+  const margin = p("margem_pct");
+  const tax = p("imposto_pct");
+  const adjustments = useMemo(
+    () =>
+      adj ?? {
+        perda_material_pct: materialLoss,
+        margem_pct: margin,
+        imposto_pct: tax,
+      },
+    [adj, materialLoss, margin, tax],
+  );
   const totals = useMemo(
     () =>
       computeQuote({ quantity, materials, operations, services, adjustments }),
@@ -91,8 +104,7 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
   const est = productionEstimate(operations, quantity, p("horas_dia") || 8);
   const pend = technicalPendencies(specs, {
     materials: materials.length,
-    operations: operations.length,
-    operationLines: operations,
+    operations,
   });
 
   const byKind = (k: string) => catalog.filter((c) => c.kind === k && c.active);
@@ -103,8 +115,9 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
     patch: Partial<T>,
   ) => set(arr.map((x, j) => (j === i ? { ...x, ...patch } : x)));
 
-  const { can } = useMe();
+  const { can } = meQuery;
   async function save(status: QuoteStatus) {
+    if (saving) return;
     const identityIssues = quoteIdentityIssues({
       clientId,
       project,
@@ -112,6 +125,14 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
     });
     if (identityIssues.length > 0) {
       toast.error(identityIssues.join(" "));
+      return;
+    }
+    if (
+      !Number.isInteger(quantity) ||
+      quantity < 1 ||
+      quantity > maxQuoteQuantity
+    ) {
+      toast.error("Informe uma quantidade inteira de 1 a 2.147.483.647 peças.");
       return;
     }
     if (pend.length > 0) {
@@ -146,32 +167,76 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
       lead_time_manual: leadManual,
       notes,
     };
-    const res = initial
-      ? await supabase
+    try {
+      let res;
+      if (initial) {
+        res = await supabase
           .from("quotes")
           .update(payload)
           .eq("id", initial.id)
+          .eq("updated_at", initial.updated_at)
           .select("id")
-          .single()
-      : await supabase
+          .maybeSingle();
+      } else {
+        const { data, error } = await supabase.auth.getUser();
+        if (error || !data.user || data.user.id !== meQuery.me?.user.id) {
+          toast.error(
+            "Não foi possível confirmar a conta. Tente entrar novamente.",
+          );
+          return;
+        }
+        res = await supabase
           .from("quotes")
-          .insert({
-            ...payload,
-            created_by: (await supabase.auth.getUser()).data.user?.id ?? null,
-          })
+          .insert({ ...payload, created_by: data.user.id })
           .select("id")
           .single();
-    setSaving(false);
-    if (res.error) {
-      toast.error("Erro ao salvar: " + res.error.message);
-      return;
+      }
+      if (res.error) {
+        toast.error("Erro ao salvar: " + res.error.message);
+        return;
+      }
+      if (!res.data) {
+        toast.error(
+          "O orçamento mudou ou ficou indisponível. Abra a versão atual antes de salvar.",
+        );
+        return;
+      }
+      toast.success(
+        savedStatus === "rascunho" ? "Rascunho salvo" : "Orçamento salvo",
+      );
+      qc.invalidateQueries({ queryKey: ["quotes"] });
+      qc.invalidateQueries({ queryKey: ["audit"] });
+      navigate({ to: "/orcamentos/$id", params: { id: res.data.id } });
+    } catch {
+      toast.error("Não foi possível salvar o orçamento. Tente novamente.");
+    } finally {
+      setSaving(false);
     }
-    toast.success(
-      savedStatus === "rascunho" ? "Rascunho salvo" : "Orçamento salvo",
+  }
+
+  const dependencies = [clientsQuery, catalogQuery, paramsQuery, meQuery];
+  const failed = dependencies.filter((query) => query.isError);
+  if (failed.length) {
+    return (
+      <div className="space-y-2">
+        <p role="alert" className="text-destructive">
+          Não foi possível carregar os dados necessários para o orçamento.
+        </p>
+        <Button
+          variant="outline"
+          disabled={failed.some((query) => query.isFetching)}
+          onClick={() => failed.forEach((q) => void q.refetch())}
+        >
+          Tentar novamente
+        </Button>
+      </div>
     );
-    qc.invalidateQueries({ queryKey: ["quotes"] });
-    qc.invalidateQueries({ queryKey: ["audit"] });
-    navigate({ to: "/orcamentos/$id", params: { id: res.data.id } });
+  }
+  if (dependencies.some((query) => query.isPending)) {
+    return <p role="status">Carregando dados do orçamento…</p>;
+  }
+  if (!can.editQuotes) {
+    return <p role="alert">Seu perfil não permite editar orçamentos.</p>;
   }
 
   return (
@@ -185,8 +250,9 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5 sm:col-span-2">
-              <Label>Cliente *</Label>
+              <Label htmlFor="quote-client">Cliente *</Label>
               <select
+                id="quote-client"
                 className={sel}
                 required
                 value={clientId}
@@ -203,8 +269,9 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
               </select>
             </div>
             <div className="space-y-1.5">
-              <Label>Projeto *</Label>
+              <Label htmlFor="quote-project">Projeto *</Label>
               <Input
+                id="quote-project"
                 required
                 value={project}
                 onChange={(e) => setProject(e.target.value)}
@@ -212,8 +279,9 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Peça *</Label>
+              <Label htmlFor="quote-part">Peça *</Label>
               <Input
+                id="quote-part"
                 required
                 value={partName}
                 onChange={(e) => setPartName(e.target.value)}
@@ -228,10 +296,13 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Quantidade</Label>
+              <Label htmlFor="quote-quantity">Quantidade</Label>
               <Input
+                id="quote-quantity"
                 type="number"
                 min={1}
+                max={maxQuoteQuantity}
+                step={1}
                 className="num"
                 value={quantity}
                 onChange={(e) =>

@@ -54,7 +54,7 @@ function Dashboard() {
     t: quoteTotals(q),
     p: technicalPendencies(q.specs, {
       materials: q.materials.length,
-      operations: q.operations.length,
+      operations: q.operations,
     }),
   }));
   const open = rows.filter(

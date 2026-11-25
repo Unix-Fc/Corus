@@ -63,8 +63,7 @@ function Detail() {
   const est = productionEstimate(q.operations, q.quantity, hpd);
   const pend = technicalPendencies(q.specs, {
     materials: q.materials.length,
-    operations: q.operations.length,
-    operationLines: q.operations,
+    operations: q.operations,
   });
   const name = (cid?: string | null) =>
     catalog.find((c) => c.id === cid)?.name ?? "—";

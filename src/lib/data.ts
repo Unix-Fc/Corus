@@ -77,13 +77,33 @@ export function useQuotes() {
     enabled: Boolean(session),
     retry: false,
     queryFn: async ({ signal }) => {
-      const { data, error } = await supabase
-        .from("quotes")
-        .select("*, clients(name)")
-        .order("number", { ascending: false })
-        .abortSignal(signal);
-      if (error) throw error;
-      return data as unknown as Quote[];
+      const quotes: Quote[] = [];
+      let afterId: string | undefined;
+      // Page by the primary key so rows without a quote number are included.
+      for (;;) {
+        signal.throwIfAborted();
+        const query = supabase
+          .from("quotes")
+          .select("*, clients(name)")
+          .order("id")
+          .limit(250)
+          .abortSignal(signal);
+        if (afterId) query.gt("id", afterId);
+
+        const { data, error } = await query;
+        if (error) throw error;
+        const last = data.at(-1);
+        if (!last) break;
+
+        quotes.push(...(data as unknown as Quote[]));
+        afterId = last.id;
+      }
+      return quotes.sort((a, b) => {
+        if (a.number === b.number) return 0;
+        if (a.number == null) return -1;
+        if (b.number == null) return 1;
+        return b.number - a.number;
+      });
     },
   });
 }

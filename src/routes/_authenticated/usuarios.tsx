@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/status-badge";
 import { ROLE_LABEL, type AppRole } from "@/lib/data";
+import { useAuthScope } from "@/hooks/use-auth-session";
 import { useMe } from "@/hooks/use-me";
 import { useServerFn } from "@tanstack/react-start";
 import { Ban, Check, Plus, Trash2 } from "lucide-react";
@@ -30,7 +31,8 @@ type ManageableRole = Extract<AppRole, "admin" | "orcamentista">;
 const ROLES: ManageableRole[] = ["admin", "orcamentista"];
 
 function Users() {
-  const { can, me } = useMe();
+  const { can, me, isPending: checkingPermissions } = useMe();
+  const scope = useAuthScope();
   const create = useServerFn(createUser);
   const del = useServerFn(deleteUser);
   const setAccess = useServerFn(setUserAccess);
@@ -81,15 +83,20 @@ function Users() {
       toast.error(e instanceof Error ? e.message : "Erro ao alterar acesso");
     }
   }
-  const { data } = useQuery({
-    queryKey: ["users"],
-    queryFn: async () => {
+  const users = useQuery({
+    queryKey: ["users", scope?.userId, scope?.revision, "management"],
+    enabled: can.manageUsers,
+    queryFn: async ({ signal }) => {
       const [
         { data: profiles, error: profilesError },
         { data: roles, error: rolesError },
       ] = await Promise.all([
-        supabase.from("profiles").select("*").order("created_at"),
-        supabase.from("user_roles").select("*"),
+        supabase
+          .from("profiles")
+          .select("*")
+          .order("created_at")
+          .abortSignal(signal),
+        supabase.from("user_roles").select("*").abortSignal(signal),
       ]);
       if (profilesError) throw profilesError;
       if (rolesError) throw rolesError;
@@ -116,6 +123,11 @@ function Users() {
     qc.invalidateQueries({ queryKey: ["users"] });
     qc.invalidateQueries({ queryKey: ["me"] });
   }
+  if (checkingPermissions) return <p role="status">Verificando permissões…</p>;
+  if (!can.manageUsers)
+    return <p role="alert">Seu perfil não permite gerenciar usuários.</p>;
+
+  const records = users.isSuccess ? users.data : [];
   return (
     <>
       <PageHeader
@@ -179,6 +191,17 @@ function Users() {
       )}
       <Card className="mb-6">
         <CardContent className="overflow-x-auto p-4">
+          {users.isPending && <p role="status">Carregando usuários…</p>}
+          {users.isError && (
+            <div className="space-y-2">
+              <p role="alert" className="text-destructive">
+                Não foi possível carregar os usuários.
+              </p>
+              <Button variant="outline" onClick={() => void users.refetch()}>
+                Tentar novamente
+              </Button>
+            </div>
+          )}
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left text-xs uppercase text-muted-foreground">
@@ -189,7 +212,7 @@ function Users() {
               </tr>
             </thead>
             <tbody>
-              {(data ?? []).map((u) => (
+              {records.map((u) => (
                 <tr key={u.id} className="border-b last:border-0">
                   <td className="py-2.5">
                     <div className="font-medium">{u.full_name}</div>

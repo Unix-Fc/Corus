@@ -130,7 +130,7 @@ function List() {
                 {rows.map((x) => {
                   const pend = technicalPendencies(x.specs, {
                     materials: x.materials.length,
-                    operations: x.operations.length,
+                    operations: x.operations,
                   });
                   return (
                     <tr
