@@ -9,6 +9,7 @@ export type MaterialLine = {
   unit_cost: number;
 };
 export type OperationLine = {
+  sequence?: number;
   machine_id?: string | null;
   tool_id?: string | null;
   cargo_id?: string | null;
@@ -57,6 +58,19 @@ export function operationHourlyCost(l: OperationLine) {
 }
 export function operationCost(l: OperationLine, quantity: number) {
   return round2(operationHours(l, quantity) * operationHourlyCost(l));
+}
+
+export function orderedOperations(operations: OperationLine[]) {
+  return operations
+    .map((operation, index) => ({
+      ...operation,
+      sequence: operation.sequence ?? index + 1,
+      originalIndex: index,
+    }))
+    .sort(
+      (a, b) => a.sequence - b.sequence || a.originalIndex - b.originalIndex,
+    )
+    .map(({ originalIndex: _originalIndex, ...operation }) => operation);
 }
 
 export function computeQuote(input: {
@@ -130,7 +144,11 @@ export type Pending = {
 
 export function technicalPendencies(
   specs: Specs,
-  ctx: { materials: number; operations: number },
+  ctx: {
+    materials: number;
+    operations: number;
+    operationLines?: OperationLine[];
+  },
 ): Pending[] {
   const p: Pending[] = [];
   if (!specs.desenho?.trim())
@@ -163,5 +181,36 @@ export function technicalPendencies(
       message: "Nenhuma operação interna lançada",
       severity: "media",
     });
+  if (ctx.operationLines) {
+    const seenSequences = new Set<number>();
+    orderedOperations(ctx.operationLines).forEach((operation, index) => {
+      const sequence = operation.sequence ?? index + 1;
+      const field = `operacao-${sequence}`;
+      const issues: string[] = [];
+      if (!Number.isInteger(sequence) || sequence < 1)
+        issues.push("sequência inválida");
+      if (seenSequences.has(sequence)) issues.push("sequência duplicada");
+      seenSequences.add(sequence);
+      if (!operation.description.trim()) issues.push("descrição não informada");
+      if (!operation.machine_id) issues.push("máquina não selecionada");
+      if (!Number.isFinite(operation.setup_h) || operation.setup_h < 0)
+        issues.push("setup inválido");
+      if (!Number.isFinite(operation.time_min) || operation.time_min <= 0)
+        issues.push("tempo por peça deve ser maior que zero");
+      if (
+        !Number.isFinite(operation.cost_hour) ||
+        operation.cost_hour < 0 ||
+        operationHourlyCost(operation) <= 0
+      )
+        issues.push("custo-hora aplicável não informado");
+      if (issues.length > 0) {
+        p.push({
+          field,
+          message: `Operação ${sequence}: ${issues.join(", ")}`,
+          severity: "alta",
+        });
+      }
+    });
+  }
   return p;
 }

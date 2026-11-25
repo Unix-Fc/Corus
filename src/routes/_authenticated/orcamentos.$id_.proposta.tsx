@@ -1,7 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Printer, ArrowLeft, Factory } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { materialCost, operationCost, productionEstimate } from "@/lib/calc";
+import {
+  materialCost,
+  operationCost,
+  orderedOperations,
+  productionEstimate,
+} from "@/lib/calc";
 import {
   brl,
   n2,
@@ -60,9 +65,9 @@ function Proposal() {
       qtd: `${n2(m.qty)} ${m.unit}`,
       v: materialCost(m),
     })),
-    ...q.operations.map((o) => ({
+    ...orderedOperations(q.operations).map((o) => ({
       g: "Usinagem / processo",
-      d: o.description,
+      d: `${o.sequence}. ${o.description}`,
       qtd: `${n2(o.setup_h + (o.time_min / 60) * q.quantity)} h`,
       v: operationCost(o, q.quantity),
     })),
