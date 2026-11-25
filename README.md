@@ -1,47 +1,72 @@
-# Discovery — Controle de Cálculo de Orçamento Industrial
+# Corus — Orçamentos Industriais
 
-**Projeto:** Corus Equipamentos Industriais  
-**Documento de referência:** SRC-04 — Requisitos Consolidados, versão 2.1, 04/11/2026  
-**Fase:** Discovery  
-**Status:** consolidado para revisão e validação dos responsáveis de negócio; ainda não constitui baseline aprovada.
+Sistema para elaborar orçamentos de fabricação. O Corus calcula o custo de materiais, operações internas e serviços externos, estima o tempo de produção e acompanha a proposta até a aprovação.
 
-## Finalidade
+## Pré-requisitos
 
-Este diretório reúne o entendimento consolidado do problema, objetivos, stakeholders, requisitos, regras de negócio, backlog candidato, critérios preliminares, decisões registradas, questões em aberto e rastreabilidade do Discovery.
+- Git e Node.js 24 com npm.
+- Para um banco local, [Supabase CLI](https://supabase.com/docs/guides/local-development) e um runtime de contêineres compatível com Docker em execução.
 
-Os documentos representam o estado suportado pelas fontes do projeto. Não são transcrição de conversas e não convertem hipóteses, protótipos ou sugestões em decisões aprovadas.
+## Instalação
 
-## Índice
+```bash
+git clone --branch develop https://github.com/Unix-Fc/Corus.git
+cd Corus
+npm ci
+```
 
-- [CONTEXT.md](CONTEXT.md) — contexto, processo atual, escopo e restrições.
-- [VISION.md](VISION.md) — problema, objetivos e resultados esperados.
-- [STAKEHOLDERS.md](STAKEHOLDERS.md) — stakeholders e atores identificados.
-- [GLOSSARY.md](GLOSSARY.md) — termos do domínio.
-- [BUSINESS_RULES.md](BUSINESS_RULES.md) — regras de negócio identificadas e ressalvas.
-- [FUNCTIONAL_REQUIREMENTS.md](FUNCTIONAL_REQUIREMENTS.md) — FR-001 a FR-021.
-- [NON_FUNCTIONAL_REQUIREMENTS.md](NON_FUNCTIONAL_REQUIREMENTS.md) — NFR-001 a NFR-010.
-- [BACKLOG.md](BACKLOG.md) — organização funcional candidata para as próximas etapas.
-- [ACCEPTANCE_CRITERIA.md](ACCEPTANCE_CRITERIA.md) — critérios preliminares por requisito.
-- [DECISIONS.md](DECISIONS.md) — DEC-001 a DEC-006 e limites.
-- [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md) — OPEN-001 a OPEN-032.
-- [TRACEABILITY.md](TRACEABILITY.md) — relação entre objetivos, requisitos, regras, backlog e critérios.
+### Banco e autenticação
 
-## Fontes consideradas
+Para preparar um ambiente local novo, execute na raiz do repositório:
 
-1. `SRC-01-CONTEXTO-INICIAL.md` — problema, processos manuais, usuários e cadastros inicialmente esperados.
-2. `SRC-02-PROCESSO-ATUAL-E-ENTREVISTAS.pdf` — entrevistas com Gerência Industrial, Orçamentos, PCP e Usinagem/CNC; processo atual; requisitos não funcionais e interoperabilidade.
-3. `SRC-03-PROCESSO-ATUAL-E-DIAGRAMAS.pdf` — processo, requisitos iniciais, casos de uso, protótipo e glossário.
-4. `SRC-04-REQUISITOS-CONSOLIDADOS.docx`, versão 2.1, de 04/11/2026 — consolidação pós-entrevistas, identificadores, dependências, conflitos, ambiguidades e questões abertas.
+```bash
+supabase start
+supabase status
+```
 
-## Convenções de leitura
+Use a URL da API, as chaves e a URL do banco exibidas pelo Supabase para criar um arquivo `.env.local` na raiz:
 
-- **Identificado:** consta das fontes como necessidade ou comportamento esperado.
-- **Preliminar:** critério ou comportamento proposto nas fontes, ainda sujeito à validação.
-- **Em aberto:** não há decisão suficiente; consultar `OPEN_QUESTIONS.md`.
-- **Não delimitado:** a necessidade aparece, mas o limite de escopo não foi definido.
-- Os identificadores `OBJ`, `STK`, `ACT`, `FR`, `NFR`, `BR`, `CON`, `INT`, `DAT`, `DEC`, `OPEN`, `DUP`, `CONFL`, `AMB` e `DEP` são preservados conforme SRC-04.
-- O SRC-04 não registra identificadores estáveis de Epic, Feature, User Story ou Critério de Aceitação. Para não criar identificadores fictícios nem colidir com o backlog de conversas anteriores, o backlog deste pacote referencia os FRs e marca IDs de backlog não recuperáveis como **não disponíveis na fonte consolidada**.
+```dotenv
+VITE_SUPABASE_URL=http://127.0.0.1:54321
+VITE_SUPABASE_PUBLISHABLE_KEY=<chave-publishable-ou-anon>
+SUPABASE_URL=http://127.0.0.1:54321
+SUPABASE_PUBLISHABLE_KEY=<mesma-chave-publishable-ou-anon>
+SUPABASE_SERVICE_ROLE_KEY=<chave-secret-ou-service_role>
+LOVABLE_DB_MIGRATION_URL=<url-postgres-do-banco-local>
+```
 
-## Governança e limite
+Preencha as duas variáveis de URL com o endereço da API do seu ambiente. Use a chave de servidor apenas em `SUPABASE_SERVICE_ROLE_KEY` e guarde o arquivo `.env.local` fora do Git.
 
-Este pacote não autoriza implementação nem define arquitetura, linguagem, framework, banco de dados, infraestrutura, cloud ou estratégia técnica. A passagem para outra fase depende de solicitação explícita e da validação de negócio, especialmente das questões P0 indicadas no SRC-04.
+No banco local novo, aplique as migrações versionadas:
+
+```bash
+node --env-file=.env.local node_modules/drizzle-kit/bin.cjs migrate
+```
+
+Abra o endereço do **Supabase Studio** exibido por `supabase status` e crie um usuário confirmado em **Authentication → Users**. Depois das migrações, o primeiro usuário criado no ambiente novo recebe o perfil de administrador. O administrador pode cadastrar outros usuários na tela **Usuários e perfis** do Corus.
+
+Se a equipe já forneceu um ambiente Supabase configurado, preencha `.env.local` com a URL da API e as chaves desse ambiente e siga para a execução. Use `LOVABLE_DB_MIGRATION_URL` para preparar o banco local.
+
+### Executar o Corus
+
+```bash
+node --env-file=.env.local node_modules/vite/bin/vite.js dev --host 127.0.0.1
+```
+
+Abra a URL local exibida no terminal e entre com e-mail e senha.
+
+## Criar um orçamento
+
+1. Como administrador, abra **Cadastros** e adicione o cliente e os recursos que serão usados, como materiais, máquinas, ferramentas, cargos e serviços externos.
+2. Abra **Orçamentos → Novo orçamento**. Selecione o cliente, preencha o projeto e o nome da peça e informe a quantidade do lote.
+3. Adicione materiais, operações e serviços externos conforme necessário. Revise a quantidade, o valor unitário, os tempos e os percentuais de perda de material, margem e impostos.
+4. Confira o custo, o preço de venda e o tempo estimado. Use **Salvar rascunho** para retomar a edição depois ou **Salvar orçamento** para registrar o orçamento.
+5. Acompanhe o status em **Orçamentos** ou **Pipeline**. Após a aprovação, abra **Proposta → Imprimir / PDF** se precisar gerar a proposta comercial.
+
+## Diagrama de classes
+
+![Diagrama de classes UML do Corus](Diagrama%20de%20Classes/diagrama_classes.png)
+
+- [Arquivo PNG](Diagrama%20de%20Classes/diagrama_classes.png)
+- [Corus Backlog](https://github.com/orgs/Unix-Fc/projects/5)
+- [Documentação do Discovery](docs/discovery/README.md)
