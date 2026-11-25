@@ -44,6 +44,7 @@ function historyEntry(n: number) {
     unit: "kg",
     occurred_on: n === 26 ? null : date,
     source: `Documento ${n}`,
+    material_name_snapshot: material.name,
   };
 }
 
@@ -80,6 +81,8 @@ describe("Histórico de compras e preços de materiais", () => {
         expect(url.searchParams.get("kind")).toBe("eq.material");
         return Response.json([material]);
       }
+      if (url.searchParams.get("material_id") === "is.null")
+        return Response.json([]);
       expect(url.searchParams.get("material_id")).toBe(`eq.${material.id}`);
       expect(url.searchParams.get("limit")).toBe("26");
       expect(url.searchParams.get("order")).toBe(
@@ -126,6 +129,8 @@ describe("Histórico de compras e preços de materiais", () => {
       if (String(input).includes("/catalog_items?")) {
         return Response.json([{ ...material, unit_cost: 0 }]);
       }
+      if (new URL(String(input)).searchParams.get("material_id") === "is.null")
+        return Response.json([]);
       return ++attempts === 1
         ? Response.json({ message: "Falha na consulta" }, { status: 400 })
         : Response.json([]);
@@ -158,6 +163,23 @@ describe("Histórico de compras e preços de materiais", () => {
     expect(screen.queryByLabelText("Material")).not.toBeInTheDocument();
   });
 
+  it("mantém visível o histórico de materiais excluídos", async () => {
+    const archived = {
+      ...historyEntry(1),
+      material_name_snapshot: "Material removido",
+    };
+    request.mockImplementation(async (input) => {
+      if (String(input).includes("/catalog_items?")) return Response.json([]);
+      const url = new URL(String(input));
+      expect(url.searchParams.get("material_id")).toBe("is.null");
+      return Response.json([archived]);
+    });
+
+    renderHistory();
+    expect(await screen.findByText("Material removido")).toBeInTheDocument();
+    expect(screen.getByText("Documento 1")).toBeInTheDocument();
+  });
+
   it.each(["inclusão", "exclusão"] as const)(
     "preserva os materiais existentes após %s antes do cursor",
     async (change) => {
@@ -180,6 +202,8 @@ describe("Histórico de compras e preços de materiais", () => {
       request.mockImplementation(async (input) => {
         const url = new URL(String(input));
         if (!url.pathname.endsWith("/catalog_items")) {
+          if (url.searchParams.get("material_id") === "is.null")
+            return Response.json([]);
           return Response.json([historyEntry(1)]);
         }
         expect(url.searchParams.get("limit")).toBe("26");
@@ -284,6 +308,10 @@ describe("Histórico de compras e preços de materiais", () => {
     request.mockImplementation(async (input, init) => {
       if (String(input).includes("/catalog_items?"))
         return Response.json([material]);
+      if (
+        new URL(String(input)).searchParams.get("material_id") === "is.null"
+      )
+        return Response.json([]);
       if (init?.method === "POST") {
         const body = JSON.parse(String(init.body));
         saved(body);
@@ -327,5 +355,31 @@ describe("Histórico de compras e preços de materiais", () => {
       unit_price: 18.75,
     });
     expect(screen.getByText(/51,00/)).toBeInTheDocument();
+  });
+
+  it("exibe o erro do servidor e preserva os campos quando o registro falha", async () => {
+    current.roles = ["admin"];
+    request.mockImplementation(async (input, init) => {
+      if (String(input).includes("/catalog_items?"))
+        return Response.json([material]);
+      if (init?.method === "POST") {
+        return Response.json({ message: "Acesso negado" }, { status: 403 });
+      }
+      return Response.json([]);
+    });
+
+    renderHistory();
+    await selectMaterial();
+    const price = screen.getByLabelText("Preço unitário em reais");
+    const source = screen.getByLabelText("Fonte ou referência do documento");
+    fireEvent.change(price, { target: { value: "18,75" } });
+    fireEvent.change(source, { target: { value: "Fornecedor · NF 410" } });
+    fireEvent.click(screen.getByRole("button", { name: "Registrar preço" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Não foi possível registrar o preço: Acesso negado",
+    );
+    expect(price).toHaveValue("18,75");
+    expect(source).toHaveValue("Fornecedor · NF 410");
   });
 });

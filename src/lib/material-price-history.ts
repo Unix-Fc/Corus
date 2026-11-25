@@ -13,18 +13,21 @@ const pageSize = 25;
 type HistoryCursor = { id: string; occurred_on: string | null };
 
 async function listHistory(
-  materialId: string,
+  materialId: string | null,
   cursor: HistoryCursor | null,
   signal: AbortSignal,
 ) {
   const query = supabase
     .from("material_price_history")
-    .select("id, kind, unit_price, unit, occurred_on, source")
-    .eq("material_id", materialId)
+    .select(
+      "id, kind, unit_price, unit, occurred_on, source, material_name_snapshot",
+    )
     .order("occurred_on", { ascending: false, nullsFirst: false })
     .order("id", { ascending: false })
     .limit(pageSize + 1)
     .abortSignal(signal);
+  if (materialId) query.eq("material_id", materialId);
+  else query.is("material_id", null);
 
   if (cursor?.occurred_on === null) {
     query.is("occurred_on", null).lt("id", cursor.id);
@@ -69,6 +72,30 @@ export function materialHistoryQuery(
       pageParam: HistoryCursor | null;
       signal: AbortSignal;
     }) => listHistory(materialId, pageParam, signal),
+    getNextPageParam: (page) => page.next,
+  });
+}
+
+export function unlinkedMaterialHistoryQuery(
+  scope: AuthScope | null | undefined,
+) {
+  return infiniteQueryOptions({
+    queryKey: [
+      "material-price-history",
+      scope?.userId,
+      scope?.revision,
+      "unlinked",
+    ],
+    enabled: Boolean(scope),
+    retry: false,
+    initialPageParam: null as HistoryCursor | null,
+    queryFn: ({
+      pageParam,
+      signal,
+    }: {
+      pageParam: HistoryCursor | null;
+      signal: AbortSignal;
+    }) => listHistory(null, pageParam, signal),
     getNextPageParam: (page) => page.next,
   });
 }
@@ -176,7 +203,7 @@ export async function recordMaterialPrice(input: MaterialPriceInput) {
     .insert(result.data);
   if (error) {
     throw new Error(
-      "Não foi possível registrar o preço. Confira o material e tente novamente.",
+      `Não foi possível registrar o preço: ${error.message}`,
     );
   }
 }

@@ -3,13 +3,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { StatusBadge } from "@/components/status-badge";
 import { toast } from "sonner";
-import { Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/status-badge";
 import {
   brl,
   quoteCode,
+  quoteClientName,
   quoteTotals,
   STATUS_LABEL,
   useQuotes,
@@ -104,13 +104,6 @@ function Pipeline() {
           ) : undefined
         }
       />
-      <div className="mb-4 flex gap-2 rounded-md border border-warning/40 bg-warning-soft p-3 text-sm">
-        <Info className="h-4 w-4 shrink-0 text-warning" />
-        Pipeline comercial (Pendente, Em negociação, Aprovado, Reprovado), sem
-        representar a execução da produção. Estados e transições ainda dependem
-        de validação de negócio — somente Administradores movem orçamentos, e
-        cada movimento fica registrado na auditoria.
-      </div>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {COLS.map((s) => {
           const items = quotes.filter((q) => q.status === s);
@@ -140,7 +133,7 @@ function Pipeline() {
                       </Link>
                       <div className="font-medium">{q.part_name}</div>
                       <div className="text-xs text-muted-foreground">
-                        {q.clients?.name}
+                        {quoteClientName(q)}
                       </div>
                       <div className="flex items-center justify-between gap-2">
                         <span className="num font-semibold">

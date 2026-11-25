@@ -18,6 +18,7 @@ import {
   materialHistoryQuery,
   MATERIAL_PRICE_KIND_LABEL,
   recordMaterialPrice,
+  unlinkedMaterialHistoryQuery,
   type HistoryMaterial,
 } from "@/lib/material-price-history";
 
@@ -45,7 +46,10 @@ function MaterialPriceHistory() {
           retry={() => void refetch()}
         />
       ) : can.access ? (
-        <MaterialPicker canRecord={can.editCatalog} />
+        <>
+          <MaterialPicker canRecord={can.editCatalog} />
+          <UnlinkedMaterialHistory />
+        </>
       ) : (
         <p role="alert">
           Seu perfil não permite consultar o histórico de materiais.
@@ -126,6 +130,87 @@ function MaterialPicker({ canRecord }: { canRecord: boolean }) {
         />
       )}
     </div>
+  );
+}
+
+function UnlinkedMaterialHistory() {
+  const scope = useAuthScope();
+  const history = useInfiniteQuery(unlinkedMaterialHistoryQuery(scope));
+  const failed = history.isError && !history.isFetchNextPageError;
+  const rows = failed
+    ? []
+    : (history.data?.pages.flatMap((page) => page.rows) ?? []);
+
+  if (history.isPending) return <p role="status">Carregando históricos preservados…</p>;
+  if (failed) {
+    return (
+      <QueryError
+        message="Não foi possível carregar históricos de materiais excluídos."
+        retry={() => void history.refetch()}
+      />
+    );
+  }
+  if (rows.length === 0) return null;
+
+  return (
+    <Card className="mt-6">
+      <CardContent className="space-y-3 p-4">
+        <h2 className="text-lg font-semibold">
+          Histórico de materiais excluídos
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Os registros foram preservados após a exclusão do cadastro de origem.
+        </p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b">
+                <th scope="col" className="p-2">
+                  Material
+                </th>
+                <th scope="col" className="p-2">
+                  Tipo
+                </th>
+                <th scope="col" className="p-2">
+                  Data
+                </th>
+                <th scope="col" className="p-2">
+                  Preço unitário
+                </th>
+                <th scope="col" className="p-2">
+                  Origem
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.id} className="border-b align-top last:border-0">
+                  <td className="p-2">{row.material_name_snapshot}</td>
+                  <td className="p-2">{MATERIAL_PRICE_KIND_LABEL[row.kind]}</td>
+                  <td className="p-2 whitespace-nowrap">
+                    {row.occurred_on
+                      ? row.occurred_on.split("-").reverse().join("/")
+                      : "Não informada"}
+                  </td>
+                  <td className="p-2 whitespace-nowrap">
+                    {brl(row.unit_price)} / {row.unit}
+                  </td>
+                  <td className="p-2 wrap-anywhere">{row.source}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {history.hasNextPage && (
+          <LoadMore
+            label="registros"
+            failed={history.isFetchNextPageError}
+            busy={history.isFetching}
+            load={() => void history.fetchNextPage({ cancelRefetch: false })}
+          />
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

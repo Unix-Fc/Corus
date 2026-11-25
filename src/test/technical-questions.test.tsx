@@ -72,10 +72,6 @@ function renderPendencies() {
   );
 }
 
-function recordId(number: number) {
-  return `00000000-0000-4000-8000-${String(number).padStart(12, "0")}`;
-}
-
 describe("Dúvidas técnicas", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -94,6 +90,7 @@ describe("Dúvidas técnicas", () => {
     request.mockImplementation(async (input) => {
       const url = new URL(String(input));
       if (url.pathname.endsWith("/quotes")) return Response.json([quote]);
+      expect(url.searchParams.has("created_by")).toBe(false);
       expect(url.searchParams.get("order")).toBe("created_at.desc,id.desc");
       expect(url.searchParams.get("limit")).toBe("26");
       const cursor = url.searchParams.get("or");
@@ -188,6 +185,9 @@ describe("Dúvidas técnicas", () => {
         questions = [openQuestion];
         return new Response(null, { status: 201 });
       }
+      expect(new URL(String(input)).searchParams.get("created_by")).toBe(
+        `eq.${quoteId}`,
+      );
       return Response.json(questions);
     });
 

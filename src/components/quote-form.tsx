@@ -16,6 +16,7 @@ import { PendingTag } from "@/components/status-badge";
 import {
   computeQuote,
   hourlyCostFromMonthlySalary,
+  monthlyHoursForQuote,
   materialCost,
   operationCost,
   productionEstimate,
@@ -46,8 +47,17 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
   const qc = useQueryClient();
   const { data: clients = [] } = useClients();
   const { data: catalog = [] } = useCatalog();
-  const { data: params = [] } = useParams();
+  const {
+    data: params = [],
+    isPending: paramsPending,
+    isError: paramsError,
+  } = useParams();
   const p = (k: string) => Number(params.find((x) => x.key === k)?.value ?? 0);
+  const configuredMonthlyHours = p("horas_mensais_cargo");
+  const monthlyHours = monthlyHoursForQuote(
+    initial?.monthly_hours,
+    configuredMonthlyHours,
+  );
 
   const [clientId, setClientId] = useState(initial?.client_id ?? "");
   const [project, setProject] = useState(initial?.project ?? "");
@@ -78,15 +88,32 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [saving, setSaving] = useState(false);
 
-  const adjustments: Adjustments = adj ?? {
-    perda_material_pct: p("perda_material_pct"),
-    margem_pct: p("margem_pct"),
-    imposto_pct: p("imposto_pct"),
-  };
+  const adjustments: Adjustments = useMemo(
+    () =>
+      adj ?? {
+        perda_material_pct: Number(
+          params.find((x) => x.key === "perda_material_pct")?.value ?? 0,
+        ),
+        margem_pct: Number(
+          params.find((x) => x.key === "margem_pct")?.value ?? 0,
+        ),
+        imposto_pct: Number(
+          params.find((x) => x.key === "imposto_pct")?.value ?? 0,
+        ),
+      },
+    [adj, params],
+  );
   const totals = useMemo(
     () =>
-      computeQuote({ quantity, materials, operations, services, adjustments }),
-    [quantity, materials, operations, services, adjustments],
+      computeQuote({
+        quantity,
+        materials,
+        operations,
+        services,
+        adjustments,
+        monthlyHours,
+      }),
+    [quantity, materials, operations, services, adjustments, monthlyHours],
   );
   const est = productionEstimate(operations, quantity, p("horas_dia") || 8);
   const pend = technicalPendencies(specs, {
@@ -105,6 +132,14 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
 
   const { can } = useMe();
   async function save(status: QuoteStatus) {
+    if (!initial && paramsPending) {
+      toast.error("Aguarde o carregamento dos parâmetros de cálculo.");
+      return;
+    }
+    if (!initial && paramsError) {
+      toast.error("Não foi possível carregar os parâmetros de cálculo.");
+      return;
+    }
     const identityIssues = quoteIdentityIssues({
       clientId,
       project,
@@ -129,8 +164,18 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
         : status === "rascunho"
           ? "rascunho"
           : "pendente";
+    const clientNameSnapshot =
+      initial?.client_id === clientId && initial.client_name_snapshot
+        ? initial.client_name_snapshot
+        : clientId
+          ? (clients.find((client) => client.id === clientId)?.name ?? null)
+          : initial?.client_id == null
+            ? (initial.client_name_snapshot ?? null)
+            : null;
     const payload = {
       client_id: clientId || null,
+      client_name_snapshot: clientNameSnapshot,
+      monthly_hours: monthlyHours,
       project,
       part_name: partName,
       part_code: partCode,
@@ -447,7 +492,7 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
             "Subtotal",
             "",
           ]}
-          footer="O custo-hora do cargo é calculado com o salário mensal cadastrado ÷ 220 horas/mês e somado ao custo-hora da máquina. Encargos e benefícios não são incluídos. Ferramentas são associadas à operação, mas seu custo ainda depende de regra aprovada."
+          footer="O custo-hora do cargo é calculado com o salário mensal cadastrado ÷ 220 horas/mês e somado ao custo-hora da máquina. Encargos e benefícios não são incluídos."
         >
           {operations.map((o, i) => (
             <tr key={i} className="border-t align-top">
@@ -482,16 +527,24 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
                       it
                         ? {
                             machine_id: it.id,
+                            machine_name_snapshot: null,
                             cost_hour: Number(it.unit_cost),
                             setup_h: Number(d.setup_padrao_h ?? o.setup_h),
                             time_source: "parametro",
                             description: o.description || it.name,
                           }
-                        : { machine_id: null },
+                        : {
+                            machine_id: null,
+                            machine_name_snapshot: null,
+                          },
                     );
                   }}
                 >
-                  <option value="">— Máquina —</option>
+                  <option value="">
+                    {o.machine_name_snapshot
+                      ? `${o.machine_name_snapshot} (excluída)`
+                      : "— Máquina —"}
+                  </option>
                   {byKind("maquina").map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
@@ -516,10 +569,15 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
                   onChange={(e) =>
                     upd(operations, setOperations, i, {
                       tool_id: e.target.value || null,
+                      tool_name_snapshot: null,
                     })
                   }
                 >
-                  <option value="">—</option>
+                  <option value="">
+                    {o.tool_name_snapshot
+                      ? `${o.tool_name_snapshot} (excluída)`
+                      : "—"}
+                  </option>
                   {byKind("ferramenta").map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
@@ -544,17 +602,21 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
                       upd(operations, setOperations, i, {
                         cargo_id: null,
                         salary_monthly: null,
+                        cargo_name_snapshot: null,
                       });
                       return;
                     }
                     upd(operations, setOperations, i, {
                       cargo_id: cargo.id,
                       salary_monthly: salary,
+                      cargo_name_snapshot: null,
                     });
                   }}
                 >
                   <option value="">
-                    {byKind("cargo").length
+                    {o.cargo_name_snapshot
+                      ? `${o.cargo_name_snapshot} (excluído)`
+                      : byKind("cargo").length
                       ? "— Selecionar cargo —"
                       : "Cadastre cargos"}
                   </option>
@@ -584,8 +646,8 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
                     })}
                 </select>
                 <p className="mt-1 text-[10px] text-muted-foreground">
-                  {o.cargo_id && o.salary_monthly != null
-                    ? `Salário: ${brl(o.salary_monthly)} · Custo-hora: ${brl(hourlyCostFromMonthlySalary(o.salary_monthly))}`
+                  {o.salary_monthly != null
+                    ? `Salário: ${brl(o.salary_monthly)} · Custo-hora: ${brl(hourlyCostFromMonthlySalary(o.salary_monthly, monthlyHours))}`
                     : "Salário conforme Cadastros"}
                 </p>
               </td>
@@ -636,7 +698,7 @@ export function QuoteForm({ initial }: { initial?: Quote }) {
                 />
               </td>
               <td className="p-1.5 text-right num whitespace-nowrap">
-                {brl(operationCost(o, quantity))}
+                {brl(operationCost(o, quantity, monthlyHours))}
               </td>
               <td className="p-1.5">
                 <Button

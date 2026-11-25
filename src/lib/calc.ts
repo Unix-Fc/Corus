@@ -13,6 +13,9 @@ export type OperationLine = {
   machine_id?: string | null;
   tool_id?: string | null;
   cargo_id?: string | null;
+  machine_name_snapshot?: string | null;
+  tool_name_snapshot?: string | null;
+  cargo_name_snapshot?: string | null;
   description: string;
   salary_monthly?: number | null;
   setup_h: number;
@@ -39,8 +42,27 @@ export const round2 = (n: number) =>
   Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 const num = (n: unknown) => (Number.isFinite(Number(n)) ? Number(n) : 0);
 
-export function hourlyCostFromMonthlySalary(salary: number) {
-  return round2(Math.max(0, num(salary)) / 220);
+export function monthlyHoursForQuote(
+  savedSnapshot: number | null | undefined,
+  configuredHours: number,
+) {
+  if (
+    savedSnapshot != null &&
+    Number.isFinite(savedSnapshot) &&
+    savedSnapshot > 0
+  ) {
+    return savedSnapshot;
+  }
+  const configured = num(configuredHours);
+  return configured > 0 ? configured : 220;
+}
+
+export function hourlyCostFromMonthlySalary(
+  salary: number,
+  monthlyHours = 220,
+) {
+  const hours = num(monthlyHours);
+  return hours > 0 ? round2(Math.max(0, num(salary)) / hours) : 0;
 }
 
 export function materialCost(l: MaterialLine) {
@@ -49,15 +71,21 @@ export function materialCost(l: MaterialLine) {
 export function operationHours(l: OperationLine, quantity: number) {
   return num(l.setup_h) + (num(l.time_min) / 60) * num(quantity);
 }
-export function operationHourlyCost(l: OperationLine) {
+export function operationHourlyCost(l: OperationLine, monthlyHours = 220) {
   const salaryCost =
-    l.cargo_id && l.salary_monthly != null
-      ? hourlyCostFromMonthlySalary(l.salary_monthly)
+    l.salary_monthly != null
+      ? hourlyCostFromMonthlySalary(l.salary_monthly, monthlyHours)
       : 0;
   return round2(num(l.cost_hour) + salaryCost);
 }
-export function operationCost(l: OperationLine, quantity: number) {
-  return round2(operationHours(l, quantity) * operationHourlyCost(l));
+export function operationCost(
+  l: OperationLine,
+  quantity: number,
+  monthlyHours = 220,
+) {
+  return round2(
+    operationHours(l, quantity) * operationHourlyCost(l, monthlyHours),
+  );
 }
 
 export function orderedOperations(operations: OperationLine[]) {
@@ -79,13 +107,18 @@ export function computeQuote(input: {
   operations: OperationLine[];
   services: ServiceLine[];
   adjustments?: Adjustments;
+  monthlyHours?: number;
 }) {
   const q = num(input.quantity);
   const materials = round2(
     input.materials.reduce((s, l) => s + materialCost(l), 0),
   );
+  const monthlyHours = input.monthlyHours ?? 220;
   const operations = round2(
-    input.operations.reduce((s, l) => s + operationCost(l, q), 0),
+    input.operations.reduce(
+      (s, l) => s + operationCost(l, q, monthlyHours),
+      0,
+    ),
   );
   const services = round2(
     input.services.reduce((s, l) => s + materialCost(l), 0),
@@ -144,10 +177,12 @@ export type Pending = {
 
 export function technicalPendencies(
   specs: Specs,
+  ctx: { materials: number; operations: number },
   ctx: {
     materials: number;
     operations: number;
     operationLines?: OperationLine[];
+    monthlyHours?: number;
   },
 ): Pending[] {
   const p: Pending[] = [];
@@ -200,7 +235,7 @@ export function technicalPendencies(
       if (
         !Number.isFinite(operation.cost_hour) ||
         operation.cost_hour < 0 ||
-        operationHourlyCost(operation) <= 0
+        operationHourlyCost(operation, ctx.monthlyHours) <= 0
       )
         issues.push("custo-hora aplicável não informado");
       if (issues.length > 0) {

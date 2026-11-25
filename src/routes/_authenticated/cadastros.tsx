@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Sheet,
   SheetContent,
@@ -53,6 +63,7 @@ export const Route = createFileRoute("/_authenticated/cadastros")({
 
 type Tab = "clientes" | CatalogKind;
 type Form = Record<string, string | number | boolean>;
+type DeleteTarget = { id: string; name: string; kind: "client" | "catalog" };
 
 function Cadastros() {
   const [tab, setTab] = useState<Tab>("clientes");
@@ -63,10 +74,33 @@ function Cadastros() {
     id: string;
     name: string;
   } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const { data: clients = [] } = useClients();
   const { data: catalog = [] } = useCatalog();
   const { can } = useMe();
   const qc = useQueryClient();
+  const remove = useMutation({
+    mutationFn: async (target: DeleteTarget) => {
+      const { error } =
+        target.kind === "client"
+          ? await supabase.from("clients").delete().eq("id", target.id)
+          : await supabase
+              .from("catalog_items")
+              .delete()
+              .eq("id", target.id);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      toast.success("Cadastro excluído. Orçamentos e históricos preservados.");
+      setDeleteTarget(null);
+      void qc.invalidateQueries({ queryKey: ["clients"] });
+      void qc.invalidateQueries({ queryKey: ["catalog"] });
+      void qc.invalidateQueries({ queryKey: ["quotes"] });
+      void qc.invalidateQueries({ queryKey: ["material-price-history"] });
+      void qc.invalidateQueries({ queryKey: ["audit"] });
+    },
+    onError: (error) => toast.error(error.message),
+  });
   const term = q.toLowerCase();
 
   const costLabel =
@@ -216,26 +250,43 @@ function Cadastros() {
                             Histórico
                           </Button>
                           {can.editCatalog && (
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() =>
-                                setEdit({
-                                  id: c.id,
-                                  f: {
+                            <>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                aria-label={`Editar cliente ${c.name}`}
+                                onClick={() =>
+                                  setEdit({
+                                    id: c.id,
+                                    f: {
+                                      name: c.name,
+                                      cnpj: c.cnpj ?? "",
+                                      contact: c.contact ?? "",
+                                      email: c.email ?? "",
+                                      phone: c.phone ?? "",
+                                      city: c.city ?? "",
+                                      active: c.active,
+                                    },
+                                  })
+                                }
+                              >
+                                <Pencil />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                aria-label={`Excluir cliente ${c.name}`}
+                                onClick={() =>
+                                  setDeleteTarget({
+                                    id: c.id,
                                     name: c.name,
-                                    cnpj: c.cnpj ?? "",
-                                    contact: c.contact ?? "",
-                                    email: c.email ?? "",
-                                    phone: c.phone ?? "",
-                                    city: c.city ?? "",
-                                    active: c.active,
-                                  },
-                                })
-                              }
-                            >
-                              <Pencil />
-                            </Button>
+                                    kind: "client",
+                                  })
+                                }
+                              >
+                                <Trash2 />
+                              </Button>
+                            </>
                           )}
                         </td>
                       </tr>
@@ -298,27 +349,50 @@ function Cadastros() {
                               Histórico
                             </Button>
                             {can.editCatalog && (
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={() =>
-                                  setEdit({
-                                    id: c.id,
-                                    f: {
-                                      code: c.code ?? "",
+                              <>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  aria-label={`Editar ${KIND_LABEL[c.kind]} ${c.name}`}
+                                  onClick={() =>
+                                    setEdit({
+                                      id: c.id,
+                                      f: {
+                                        code: c.code ?? "",
+                                        name: c.name,
+                                        unit: c.unit ?? "",
+                                        unit_cost: Number(c.unit_cost),
+                                        active: c.active,
+                                        setup: Number(
+                                          d["setup_padrao_h"] ?? 0,
+                                        ),
+                                        salario: Number(
+                                          d["salario_mensal"] ?? 0,
+                                        ),
+                                        fornecedor: String(
+                                          d["fornecedor"] ?? "",
+                                        ),
+                                      },
+                                    })
+                                  }
+                                >
+                                  <Pencil />
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  aria-label={`Excluir ${KIND_LABEL[c.kind]} ${c.name}`}
+                                  onClick={() =>
+                                    setDeleteTarget({
+                                      id: c.id,
                                       name: c.name,
-                                      unit: c.unit ?? "",
-                                      unit_cost: Number(c.unit_cost),
-                                      active: c.active,
-                                      setup: Number(d["setup_padrao_h"] ?? 0),
-                                      salario: Number(d["salario_mensal"] ?? 0),
-                                      fornecedor: String(d["fornecedor"] ?? ""),
-                                    },
-                                  })
-                                }
-                              >
-                                <Pencil />
-                              </Button>
+                                      kind: "catalog",
+                                    })
+                                  }
+                                >
+                                  <Trash2 />
+                                </Button>
+                              </>
                             )}
                           </td>
                         </tr>
@@ -407,6 +481,41 @@ function Cadastros() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open && !remove.isPending) setDeleteTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir cadastro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget?.name} será removido dos cadastros ativos. Nomes e
+              valores já usados em orçamentos e históricos serão preservados
+              como snapshots, as referências serão desvinculadas e as
+              alterações ficarão registradas na auditoria. Esta ação não pode
+              ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={remove.isPending}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={remove.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(event) => {
+                event.preventDefault();
+                if (deleteTarget) remove.mutate(deleteTarget);
+              }}
+            >
+              {remove.isPending ? "Excluindo…" : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Sheet open={!!hist} onOpenChange={(o) => !o && setHist(null)}>
         <SheetContent className="overflow-y-auto">

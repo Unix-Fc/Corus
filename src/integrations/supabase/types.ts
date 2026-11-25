@@ -164,8 +164,9 @@ export type Database = {
           created_by: string;
           id: string;
           kind: Database["public"]["Enums"]["material_price_kind"];
-          material_id: string;
+          material_id: string | null;
           material_kind: Database["public"]["Enums"]["catalog_kind"];
+          material_name_snapshot: string;
           occurred_on: string | null;
           source: string;
           unit: string;
@@ -177,8 +178,9 @@ export type Database = {
           created_by?: string;
           id?: string;
           kind: Database["public"]["Enums"]["material_price_kind"];
-          material_id: string;
+          material_id?: string | null;
           material_kind?: Database["public"]["Enums"]["catalog_kind"];
+          material_name_snapshot?: string;
           occurred_on?: string | null;
           source: string;
           unit: string;
@@ -190,11 +192,11 @@ export type Database = {
         >;
         Relationships: [
           {
-            foreignKeyName: "material_price_history_material_fkey";
-            columns: ["material_id", "material_kind"];
+            foreignKeyName: "material_price_history_material_id_fkey";
+            columns: ["material_id"];
             isOneToOne: false;
             referencedRelation: "catalog_items";
-            referencedColumns: ["id", "kind"];
+            referencedColumns: ["id"];
           },
         ];
       };
@@ -226,12 +228,14 @@ export type Database = {
         Row: {
           adjustments: Json;
           client_id: string | null;
+          client_name_snapshot: string | null;
           created_at: string;
           created_by: string | null;
           id: string;
           lead_time_days: number | null;
           lead_time_manual: boolean;
           materials: Json;
+          monthly_hours: number;
           notes: string | null;
           number: number;
           operations: Json;
@@ -248,12 +252,14 @@ export type Database = {
         Insert: {
           adjustments?: Json;
           client_id?: string | null;
+          client_name_snapshot?: string | null;
           created_at?: string;
           created_by?: string | null;
           id?: string;
           lead_time_days?: number | null;
           lead_time_manual?: boolean;
           materials?: Json;
+          monthly_hours?: number;
           notes?: string | null;
           number?: number;
           operations?: Json;
@@ -270,12 +276,14 @@ export type Database = {
         Update: {
           adjustments?: Json;
           client_id?: string | null;
+          client_name_snapshot?: string | null;
           created_at?: string;
           created_by?: string | null;
           id?: string;
           lead_time_days?: number | null;
           lead_time_manual?: boolean;
           materials?: Json;
+          monthly_hours?: number;
           notes?: string | null;
           number?: number;
           operations?: Json;

@@ -1,9 +1,5 @@
-import { useId, useState, type FormEvent, type ReactNode } from "react";
-import {
-  useInfiniteQuery,
-  useMutation,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useId, useState, type FormEvent } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +10,11 @@ import { PageHeader, StatusBadge } from "@/components/status-badge";
 import { useAuthScope } from "@/hooks/use-auth-session";
 import { useMe } from "@/hooks/use-me";
 import { technicalPendencies } from "@/lib/calc";
+import { dt, quoteCode, useQuotes, type Quote } from "@/lib/data";
+import {
+  clarifyTechnicalQuestion,
+  registerTechnicalQuestion,
+  technicalQuestionsQuery,
 import { dt, quoteCode } from "@/lib/data";
 import {
   clarifyTechnicalQuestion,
@@ -70,9 +71,9 @@ function Pend() {
 }
 
 function Pendencies({ canClarify }: { canClarify: boolean }) {
+  const quotes = useQuotes();
   const scope = useAuthScope();
-  const quotes = useInfiniteQuery(pendencyQuotesQuery(scope));
-  const questions = useInfiniteQuery(technicalQuestionsQuery(scope));
+  const questions = useQuery(technicalQuestionsQuery(scope));
   const quotesFailed = quotes.isError && !quotes.isFetchNextPageError;
   const questionsFailed = questions.isError && !questions.isFetchNextPageError;
   const quoteRows = quotesFailed
@@ -96,7 +97,7 @@ function Pendencies({ canClarify }: { canClarify: boolean }) {
               <p role="status" className="text-sm text-muted-foreground">
                 Carregando orçamentos…
               </p>
-            ) : quotesFailed ? (
+            ) : quotes.isError ? (
               <div className="space-y-2">
                 <p role="alert" className="text-sm text-destructive">
                   Não foi possível carregar os orçamentos.
@@ -109,12 +110,12 @@ function Pendencies({ canClarify }: { canClarify: boolean }) {
                   Recarregar orçamentos
                 </Button>
               </div>
-            ) : quoteRows.length === 0 ? (
+            ) : quotes.data.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 Nenhum orçamento disponível para registrar uma dúvida.
               </p>
             ) : (
-              <RegisterQuestion quotes={quoteRows}>
+              <RegisterQuestion quotes={quotes.data} />
                 {quotes.hasNextPage && (
                   <LoadMore
                     label="orçamentos"
@@ -139,7 +140,7 @@ function Pendencies({ canClarify }: { canClarify: boolean }) {
               Carregando dúvidas…
             </p>
           )}
-          {questionsFailed && (
+          {questions.isError && (
             <div className="space-y-2">
               <p role="alert" className="text-sm text-destructive">
                 Não foi possível carregar as dúvidas técnicas.
@@ -153,38 +154,28 @@ function Pendencies({ canClarify }: { canClarify: boolean }) {
               </Button>
             </div>
           )}
-          {questions.isSuccess && questionRows.length === 0 && (
+          {questions.isSuccess && questions.data.length === 0 && (
             <p className="text-sm text-muted-foreground">
               Nenhuma dúvida técnica registrada.
             </p>
           )}
-          {questionRows.map((question) => (
-            <QuestionCard
-              key={question.id}
-              question={question}
-              canClarify={canClarify}
-            />
-          ))}
-          {!questionsFailed && questions.hasNextPage && (
-            <LoadMore
-              label="dúvidas"
-              failed={questions.isFetchNextPageError}
-              fetching={questions.isFetching}
-              onLoad={() =>
-                void questions.fetchNextPage({ cancelRefetch: false })
-              }
-            />
-          )}
+          {questions.isSuccess &&
+            questions.data.map((question) => (
+              <QuestionCard
+                key={question.id}
+                question={question}
+                canClarify={canClarify}
+              />
+            ))}
         </section>
 
-        {!quotesFailed && quotes.data && (
-          <QuotePendencies quotes={quoteRows} hasMore={quotes.hasNextPage} />
-        )}
+        {quotes.isSuccess && <QuotePendencies quotes={quotes.data} />}
       </div>
     </>
   );
 }
 
+function RegisterQuestion({ quotes }: { quotes: Quote[] }) {
 function LoadMore({
   label,
   failed,
@@ -218,15 +209,17 @@ function LoadMore({
 
 function RegisterQuestion({
   quotes,
+  isAdmin,
   children,
 }: {
   quotes: PendencyQuote[];
+  isAdmin: boolean;
   children?: ReactNode;
 }) {
   const [quoteId, setQuoteId] = useState("");
   const [description, setDescription] = useState("");
   const qc = useQueryClient();
-  const { queryKey } = technicalQuestionsQuery(useAuthScope());
+  const { queryKey } = technicalQuestionsQuery(useAuthScope(), isAdmin);
   const registration = useMutation({
     mutationFn: async (input: { quote_id: string; description: string }) => {
       if (!quotes.some((quote) => quote.id === input.quote_id)) {
@@ -278,7 +271,6 @@ function RegisterQuestion({
             </option>
           ))}
         </select>
-        {children}
       </div>
 
       <div className="space-y-1.5">
@@ -375,7 +367,7 @@ function ClarificationForm({ questionId }: { questionId: string }) {
   const fieldId = useId();
   const [clarification, setClarification] = useState("");
   const qc = useQueryClient();
-  const { queryKey } = technicalQuestionsQuery(useAuthScope());
+  const { queryKey } = technicalQuestionsQuery(useAuthScope(), true);
   const resolution = useMutation({
     mutationFn: (text: string) => clarifyTechnicalQuestion(questionId, text),
   });
@@ -434,13 +426,7 @@ function ClarificationForm({ questionId }: { questionId: string }) {
   );
 }
 
-function QuotePendencies({
-  quotes,
-  hasMore,
-}: {
-  quotes: PendencyQuote[];
-  hasMore: boolean;
-}) {
+function QuotePendencies({ quotes }: { quotes: Quote[] }) {
   const rows = quotes
     .map((q) => ({
       q,
@@ -460,17 +446,11 @@ function QuotePendencies({
         Desenho, tolerância, tratamento térmico e itens ausentes. Não bloqueiam
         rascunhos.
       </p>
-      {hasMore && (
-        <p className="text-sm text-muted-foreground">
-          Para consultar os próximos orçamentos, use “Carregar mais orçamentos”
-          no formulário.
-        </p>
-      )}
       <Card>
         <CardContent className="overflow-x-auto p-4">
           {rows.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              Nenhuma pendência técnica nos orçamentos carregados.
+              Nenhuma pendência técnica.
             </p>
           ) : (
             <table className="w-full text-sm">
@@ -497,7 +477,7 @@ function QuotePendencies({
                     <td>
                       <div className="font-medium">{q.part_name}</div>
                       <div className="text-xs text-muted-foreground">
-                        {q.clients?.name}
+                        {quoteClientName(q)}
                       </div>
                     </td>
                     <td>
