@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Pencil, Printer, AlertTriangle, Info } from "lucide-react";
+import { Pencil, Printer, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import {
   operationCost,
   operationHourlyCost,
   operationHours,
+  orderedOperations,
   productionEstimate,
   technicalPendencies,
 } from "@/lib/calc";
@@ -20,6 +21,7 @@ import {
   brl,
   n2,
   quoteCode,
+  quoteClientName,
   quoteTotals,
   STATUS_LABEL,
   useAudit,
@@ -42,12 +44,19 @@ export const Route = createFileRoute("/_authenticated/orcamentos/$id")({
 
 function Detail() {
   const { id } = Route.useParams();
-  const { data: q, isLoading } = useQuote(id);
+  const { data: q, isLoading, isError } = useQuote(id);
   const { data: catalog = [] } = useCatalog();
   const { data: params = [] } = useParams();
   const { data: audit = [] } = useAudit({ entity: "quotes", entityId: id });
   const { can } = useMe();
   const qc = useQueryClient();
+  if (isError)
+    return (
+      <p role="alert" className="text-destructive">
+        Não foi possível carregar o orçamento. Verifique o acesso ou recarregue
+        a página.
+      </p>
+    );
   if (isLoading || !q)
     return <p className="text-muted-foreground">Carregando…</p>;
   const t = quoteTotals(q);
@@ -56,9 +65,10 @@ function Detail() {
   const pend = technicalPendencies(q.specs, {
     materials: q.materials.length,
     operations: q.operations.length,
+    operationLines: q.operations,
   });
-  const name = (cid?: string | null) =>
-    catalog.find((c) => c.id === cid)?.name ?? "—";
+  const name = (cid?: string | null, snapshot?: string | null) =>
+    catalog.find((c) => c.id === cid)?.name ?? snapshot ?? "—";
 
   async function setStatus(s: QuoteStatus) {
     const { error } = await supabase
@@ -78,7 +88,7 @@ function Detail() {
     <>
       <PageHeader
         title={`${quoteCode(q.number)} · ${q.part_name}`}
-        subtitle={`${q.clients?.name ?? "Sem cliente"} · ${q.project ?? ""}`}
+        subtitle={`${quoteClientName(q, "Sem cliente")} · ${q.project ?? ""}`}
         actions={
           <>
             {can.editQuotes && (
@@ -108,8 +118,8 @@ function Detail() {
           </>
         }
       />
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <div className="space-y-6">
+      <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="min-w-0 space-y-6">
           {pend.length > 0 && (
             <div className="flex gap-3 rounded-md border border-warning/40 bg-warning-soft p-3 text-sm">
               <AlertTriangle className="h-5 w-5 shrink-0 text-warning" />
@@ -161,6 +171,7 @@ function Detail() {
               "Operação",
               "Máquina",
               "Ferramenta",
+              "Cargo",
               "Salário mensal",
               "Custo-hora máquina",
               "Custo-hora salário",
@@ -171,21 +182,27 @@ function Detail() {
               "Origem",
               "Subtotal",
             ]}
-            rows={q.operations.map((o) => [
-              o.description,
-              name(o.machine_id),
-              name(o.tool_id),
+            rows={orderedOperations(q.operations).map((o) => [
+              `${o.sequence}. ${o.description}`,
+              name(o.machine_id, o.machine_name_snapshot),
+              name(o.tool_id, o.tool_name_snapshot),
+              name(o.cargo_id, o.cargo_name_snapshot),
               o.salary_monthly == null ? "—" : brl(o.salary_monthly),
               brl(o.cost_hour),
-              o.cargo_id && o.salary_monthly != null
-                ? brl(hourlyCostFromMonthlySalary(o.salary_monthly))
+              o.salary_monthly != null
+                ? brl(
+                    hourlyCostFromMonthlySalary(
+                      o.salary_monthly,
+                      q.monthly_hours,
+                    ),
+                  )
                 : "—",
-              brl(operationHourlyCost(o)),
+              brl(operationHourlyCost(o, q.monthly_hours)),
               `${n2(o.setup_h)} h`,
               `${n2(o.time_min)} min`,
               `${n2(operationHours(o, q.quantity))} h`,
               o.time_source === "manual" ? "Manual" : "Parâmetro",
-              brl(operationCost(o, q.quantity)),
+              brl(operationCost(o, q.quantity, q.monthly_hours)),
             ])}
             total={t.operations}
           />
@@ -211,11 +228,11 @@ function Detail() {
             </CardContent>
           </Card>
         </div>
-        <aside className="space-y-4">
+        <aside className="min-w-0 space-y-4">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center justify-between text-base">
-                Estado <StatusBadge status={q.status} />
+                Situação comercial <StatusBadge status={q.status} />
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
@@ -232,11 +249,6 @@ function Detail() {
                   ))}
                 </select>
               )}
-              <p className="flex gap-1.5 text-xs text-muted-foreground">
-                <Info className="h-3.5 w-3.5 shrink-0" />
-                Estados provisórios: transições ainda dependem de validação de
-                negócio.
-              </p>
             </CardContent>
           </Card>
           <Card>
@@ -327,16 +339,21 @@ function Table({
   total: number;
 }) {
   return (
-    <Card>
+    <Card className="min-w-0">
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
         <CardTitle className="text-base">{title}</CardTitle>
         <span className="num text-sm font-medium">{brl(total)}</span>
       </CardHeader>
-      <CardContent className="overflow-x-auto">
+      <CardContent
+        className="min-w-0 overflow-x-auto"
+        role="region"
+        aria-label={`Tabela: ${title}`}
+        tabIndex={0}
+      >
         {rows.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nenhum item.</p>
         ) : (
-          <table className="w-full text-sm">
+          <table className="w-full min-w-max text-sm">
             <thead>
               <tr className="text-left text-xs uppercase text-muted-foreground">
                 {head.map((h, i) => (

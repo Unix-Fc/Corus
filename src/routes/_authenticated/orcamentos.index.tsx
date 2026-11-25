@@ -10,6 +10,7 @@ import {
   brl,
   dt,
   quoteCode,
+  quoteClientName,
   quoteTotals,
   STATUS_LABEL,
   useQuotes,
@@ -28,10 +29,17 @@ export const Route = createFileRoute("/_authenticated/orcamentos/")({
 });
 
 function List() {
-  const { data: quotes = [], isLoading } = useQuotes();
+  const { data: quotes = [], isLoading, isError } = useQuotes();
   const { can } = useMe();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<QuoteStatus | "">("");
+  if (isError) {
+    return (
+      <p role="alert" className="text-destructive">
+        Não foi possível carregar os orçamentos. Tente recarregar a página.
+      </p>
+    );
+  }
   const term = q.toLowerCase();
   const rows = quotes.filter(
     (x) =>
@@ -42,7 +50,7 @@ function List() {
           x.part_name,
           x.part_code,
           x.project,
-          x.clients?.name,
+          quoteClientName(x),
         ].some((v) => v?.toLowerCase().includes(term))),
   );
   return (
@@ -139,7 +147,7 @@ function List() {
                           {quoteCode(x.number)}
                         </Link>
                       </td>
-                      <td className="px-3">{x.clients?.name ?? "—"}</td>
+                      <td className="px-3">{quoteClientName(x)}</td>
                       <td className="px-3">
                         <div className="font-medium">
                           {x.part_name}{" "}

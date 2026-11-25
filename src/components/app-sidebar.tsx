@@ -7,6 +7,7 @@ import {
   Database,
   SlidersHorizontal,
   History,
+  PackageSearch,
   Users,
   Factory,
 } from "lucide-react";
@@ -33,6 +34,11 @@ const groups = [
       { title: "Orçamentos", url: "/orcamentos", icon: FileText },
       { title: "Pipeline", url: "/pipeline", icon: KanbanSquare },
       { title: "Pendências técnicas", url: "/pendencias", icon: AlertTriangle },
+      {
+        title: "Histórico de materiais",
+        url: "/historico-materiais",
+        icon: PackageSearch,
+      },
     ],
   },
   {

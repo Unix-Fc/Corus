@@ -49,6 +49,7 @@ function Audit() {
             <option value="quotes">Orçamentos</option>
             <option value="calc_parameters">Parâmetros</option>
             <option value="catalog_items">Cadastros</option>
+            <option value="material_price_history">Preços de materiais</option>
             <option value="clients">Clientes</option>
           </select>
         }

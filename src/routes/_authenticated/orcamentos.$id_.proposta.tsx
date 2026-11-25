@@ -1,11 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Printer, ArrowLeft, Factory } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { materialCost, operationCost, productionEstimate } from "@/lib/calc";
+import {
+  materialCost,
+  operationCost,
+  orderedOperations,
+  productionEstimate,
+} from "@/lib/calc";
 import {
   brl,
   n2,
   quoteCode,
+  quoteClientName,
   quoteTotals,
   useParams,
   useQuote,
@@ -28,8 +34,15 @@ export const Route = createFileRoute(
 
 function Proposal() {
   const { id } = Route.useParams();
-  const { data: q } = useQuote(id);
+  const { data: q, isError } = useQuote(id);
   const { data: params = [] } = useParams();
+  if (isError)
+    return (
+      <p role="alert" className="text-destructive">
+        Não foi possível carregar o orçamento. Verifique o acesso ou recarregue
+        a página.
+      </p>
+    );
   if (!q) return <p className="text-muted-foreground">Carregando…</p>;
   if (q.status !== "aprovado") {
     return (
@@ -60,11 +73,11 @@ function Proposal() {
       qtd: `${n2(m.qty)} ${m.unit}`,
       v: materialCost(m),
     })),
-    ...q.operations.map((o) => ({
+    ...orderedOperations(q.operations).map((o) => ({
       g: "Usinagem / processo",
-      d: o.description,
+      d: `${o.sequence}. ${o.description}`,
       qtd: `${n2(o.setup_h + (o.time_min / 60) * q.quantity)} h`,
-      v: operationCost(o, q.quantity),
+      v: operationCost(o, q.quantity, q.monthly_hours),
     })),
     ...q.services.map((m) => ({
       g: "Serviço externo",
@@ -112,7 +125,7 @@ function Proposal() {
             <div className="text-xs uppercase text-muted-foreground">
               Cliente
             </div>
-            <div className="font-medium">{q.clients?.name ?? "—"}</div>
+            <div className="font-medium">{quoteClientName(q)}</div>
           </div>
           <div>
             <div className="text-xs uppercase text-muted-foreground">

@@ -16,6 +16,7 @@ import { Route as AuthenticatedAuditoriaRouteImport } from './routes/_authentica
 import { Route as AuthenticatedCadastrosRouteImport } from './routes/_authenticated/cadastros'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedDescobertaRouteImport } from './routes/_authenticated/descoberta'
+import { Route as AuthenticatedHistoricoMateriaisRouteImport } from './routes/_authenticated/historico-materiais'
 import { Route as AuthenticatedParametrosRouteImport } from './routes/_authenticated/parametros'
 import { Route as AuthenticatedPendenciasRouteImport } from './routes/_authenticated/pendencias'
 import { Route as AuthenticatedPipelineRouteImport } from './routes/_authenticated/pipeline'
@@ -60,6 +61,12 @@ const AuthenticatedDescobertaRoute = AuthenticatedDescobertaRouteImport.update({
   path: '/descoberta',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedHistoricoMateriaisRoute =
+  AuthenticatedHistoricoMateriaisRouteImport.update({
+    id: '/historico-materiais',
+    path: '/historico-materiais',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedParametrosRoute = AuthenticatedParametrosRouteImport.update({
   id: '/parametros',
   path: '/parametros',
@@ -118,6 +125,7 @@ export interface FileRoutesByFullPath {
   '/cadastros': typeof AuthenticatedCadastrosRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/descoberta': typeof AuthenticatedDescobertaRoute
+  '/historico-materiais': typeof AuthenticatedHistoricoMateriaisRoute
   '/parametros': typeof AuthenticatedParametrosRoute
   '/pendencias': typeof AuthenticatedPendenciasRoute
   '/pipeline': typeof AuthenticatedPipelineRoute
@@ -135,6 +143,7 @@ export interface FileRoutesByTo {
   '/cadastros': typeof AuthenticatedCadastrosRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/descoberta': typeof AuthenticatedDescobertaRoute
+  '/historico-materiais': typeof AuthenticatedHistoricoMateriaisRoute
   '/parametros': typeof AuthenticatedParametrosRoute
   '/pendencias': typeof AuthenticatedPendenciasRoute
   '/pipeline': typeof AuthenticatedPipelineRoute
@@ -154,6 +163,7 @@ export interface FileRoutesById {
   '/_authenticated/cadastros': typeof AuthenticatedCadastrosRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/descoberta': typeof AuthenticatedDescobertaRoute
+  '/_authenticated/historico-materiais': typeof AuthenticatedHistoricoMateriaisRoute
   '/_authenticated/parametros': typeof AuthenticatedParametrosRoute
   '/_authenticated/pendencias': typeof AuthenticatedPendenciasRoute
   '/_authenticated/pipeline': typeof AuthenticatedPipelineRoute
@@ -173,6 +183,7 @@ export interface FileRouteTypes {
     | '/cadastros'
     | '/dashboard'
     | '/descoberta'
+    | '/historico-materiais'
     | '/parametros'
     | '/pendencias'
     | '/pipeline'
@@ -190,6 +201,7 @@ export interface FileRouteTypes {
     | '/cadastros'
     | '/dashboard'
     | '/descoberta'
+    | '/historico-materiais'
     | '/parametros'
     | '/pendencias'
     | '/pipeline'
@@ -208,6 +220,7 @@ export interface FileRouteTypes {
     | '/_authenticated/cadastros'
     | '/_authenticated/dashboard'
     | '/_authenticated/descoberta'
+    | '/_authenticated/historico-materiais'
     | '/_authenticated/parametros'
     | '/_authenticated/pendencias'
     | '/_authenticated/pipeline'
@@ -274,6 +287,13 @@ declare module '@tanstack/react-router' {
       path: '/descoberta'
       fullPath: '/descoberta'
       preLoaderRoute: typeof AuthenticatedDescobertaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/historico-materiais': {
+      id: '/_authenticated/historico-materiais'
+      path: '/historico-materiais'
+      fullPath: '/historico-materiais'
+      preLoaderRoute: typeof AuthenticatedHistoricoMateriaisRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/parametros': {
@@ -347,6 +367,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCadastrosRoute: typeof AuthenticatedCadastrosRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDescobertaRoute: typeof AuthenticatedDescobertaRoute
+  AuthenticatedHistoricoMateriaisRoute: typeof AuthenticatedHistoricoMateriaisRoute
   AuthenticatedParametrosRoute: typeof AuthenticatedParametrosRoute
   AuthenticatedPendenciasRoute: typeof AuthenticatedPendenciasRoute
   AuthenticatedPipelineRoute: typeof AuthenticatedPipelineRoute
@@ -363,6 +384,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCadastrosRoute: AuthenticatedCadastrosRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDescobertaRoute: AuthenticatedDescobertaRoute,
+  AuthenticatedHistoricoMateriaisRoute: AuthenticatedHistoricoMateriaisRoute,
   AuthenticatedParametrosRoute: AuthenticatedParametrosRoute,
   AuthenticatedPendenciasRoute: AuthenticatedPendenciasRoute,
   AuthenticatedPipelineRoute: AuthenticatedPipelineRoute,

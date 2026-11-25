@@ -1,14 +1,15 @@
 import {
   createFileRoute,
-  Outlet,
   Link,
+  Outlet,
   redirect,
   useRouterState,
   useNavigate,
 } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
 import { LogOut } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuthScope } from "@/hooks/use-auth-session";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { Button } from "@/components/ui/button";
@@ -34,30 +35,47 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 function Layout() {
-  const qc = useQueryClient();
+  const session = useAuthScope();
+  if (session === undefined) {
+    return (
+      <p role="status" className="p-4 text-muted-foreground">
+        Verificando sessão…
+      </p>
+    );
+  }
+  if (session === null) {
+    return (
+      <p className="p-4 text-muted-foreground">
+        Sessão encerrada.{" "}
+        <Link className="text-primary hover:underline" to="/auth">
+          Entrar
+        </Link>
+      </p>
+    );
+  }
+  return <SignedInLayout key={session.revision} />;
+}
+
+function SignedInLayout() {
   const navigate = useNavigate();
   const isQuotePage = useRouterState({
     select: (state) => state.location.pathname.startsWith("/orcamentos"),
   });
   async function signOut() {
-    await qc.cancelQueries();
-    qc.clear();
-    await supabase.auth.signOut();
-    navigate({ to: "/auth", replace: true });
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast.error("Não foi possível sair. Tente novamente.");
+      return;
+    }
+    void navigate({ to: "/auth", replace: true });
   }
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
-        {!isQuotePage && <AppSidebar />}
+        <AppSidebar />
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="no-print sticky top-0 z-10 flex h-12 items-center justify-between border-b bg-card/95 px-3 backdrop-blur">
-            {isQuotePage ? (
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/dashboard">Dashboard</Link>
-              </Button>
-            ) : (
-              <SidebarTrigger />
-            )}
+            <SidebarTrigger />
             <Button variant="ghost" size="sm" onClick={signOut}>
               <LogOut /> Sair
             </Button>
