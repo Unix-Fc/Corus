@@ -1,7 +1,6 @@
 import {
   createFileRoute,
   Outlet,
-  Link,
   redirect,
   useRouterState,
   useNavigate,
@@ -48,16 +47,10 @@ function Layout() {
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
-        {!isQuotePage && <AppSidebar />}
+        <AppSidebar />
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="no-print sticky top-0 z-10 flex h-12 items-center justify-between border-b bg-card/95 px-3 backdrop-blur">
-            {isQuotePage ? (
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/dashboard">Dashboard</Link>
-              </Button>
-            ) : (
-              <SidebarTrigger />
-            )}
+            <SidebarTrigger />
             <Button variant="ghost" size="sm" onClick={signOut}>
               <LogOut /> Sair
             </Button>
