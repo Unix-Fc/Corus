@@ -72,10 +72,107 @@ function renderPendencies() {
   );
 }
 
+function recordId(number: number) {
+  return `00000000-0000-4000-8000-${String(number).padStart(12, "0")}`;
+}
+
 describe("Dúvidas técnicas", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     currentUser.role = "admin";
+  });
+
+  it("consulta dúvidas da página seguinte mesmo quando o horário de cadastro é igual", async () => {
+    const createdAt = "2026-11-24T12:00:00+00:00";
+    const records = Array.from({ length: 26 }, (_, index) => ({
+      ...openQuestion,
+      id: recordId(26 - index),
+      description: `Dúvida técnica ${index + 1}`,
+      created_at: createdAt,
+    }));
+    let attempts = 0;
+    request.mockImplementation(async (input) => {
+      const url = new URL(String(input));
+      if (url.pathname.endsWith("/quotes")) return Response.json([quote]);
+      expect(url.searchParams.get("order")).toBe("created_at.desc,id.desc");
+      expect(url.searchParams.get("limit")).toBe("26");
+      const cursor = url.searchParams.get("or");
+      if (!cursor) return Response.json(records);
+      expect(cursor).toBe(
+        `(created_at.lt.${createdAt},and(created_at.eq.${createdAt},id.lt.${recordId(2)}))`,
+      );
+      if (++attempts === 1) {
+        return Response.json({ message: "Falha na página" }, { status: 400 });
+      }
+      return Response.json(records.slice(25));
+    });
+
+    renderPendencies();
+    const load = await screen.findByRole("button", {
+      name: "Carregar mais dúvidas",
+    });
+    expect(screen.queryByText("Dúvida técnica 26")).not.toBeInTheDocument();
+    fireEvent.click(load);
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Não foi possível carregar mais dúvidas.",
+    );
+    expect(screen.getByText("Dúvida técnica 25")).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Carregar mais dúvidas" }),
+    );
+    expect(await screen.findByText("Dúvida técnica 26")).toBeInTheDocument();
+    expect(screen.getByText("Dúvida técnica 25")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Carregar mais dúvidas" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("carrega mais orçamentos, preserva a seleção e salva uma dúvida de uma página posterior", async () => {
+    const records = Array.from({ length: 26 }, (_, index) => ({
+      ...quote,
+      id: recordId(26 - index),
+      number: 26 - index,
+    }));
+    const posted = vi.fn();
+    request.mockImplementation(async (input, init) => {
+      const url = new URL(String(input));
+      if (url.pathname.endsWith("/quotes")) {
+        expect(url.searchParams.get("order")).toBe("number.desc");
+        expect(url.searchParams.get("limit")).toBe("26");
+        if (!url.searchParams.has("number")) return Response.json(records);
+        expect(url.searchParams.get("number")).toBe("lt.2");
+        return Response.json(records.slice(25));
+      }
+      if (init?.method === "POST") {
+        posted(JSON.parse(String(init.body)));
+        return new Response(null, { status: 201 });
+      }
+      return Response.json([]);
+    });
+
+    renderPendencies();
+    const select = await screen.findByLabelText("Orçamento");
+    fireEvent.change(select, { target: { value: recordId(26) } });
+    expect(
+      screen.queryByRole("option", { name: /ORC-00001/ }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Carregar mais orçamentos" }),
+    );
+    expect(
+      await screen.findByRole("option", { name: /ORC-00001/ }),
+    ).toBeInTheDocument();
+    expect(select).toHaveValue(recordId(26));
+    expect(
+      screen.queryByRole("button", { name: "Carregar mais orçamentos" }),
+    ).not.toBeInTheDocument();
+    fireEvent.change(select, { target: { value: recordId(1) } });
+    fireEvent.change(screen.getByLabelText("Descrição da dúvida"), {
+      target: { value: description },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Registrar dúvida" }));
+    await screen.findByRole("button", { name: "Registrar dúvida" });
+    expect(posted).toHaveBeenCalledWith({ quote_id: recordId(1), description });
   });
 
   it("valida a descrição e atualiza a lista após registrar uma dúvida", async () => {

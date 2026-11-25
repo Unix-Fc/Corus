@@ -149,8 +149,28 @@ describe("Isolamento de dados por sessão", () => {
   afterEach(() => vi.useRealTimers());
 
   it.each(["SIGNED_OUT", "SIGNED_IN"] as const)(
-    "isola os dados ao receber %s de outra aba, mesmo com consultas anteriores pendentes",
+    "isola os dados ao receber %s de outra aba, com páginas seguintes pendentes",
     async (event) => {
+      request.mockImplementation(async (input) => {
+        const response = respond(input);
+        const path = new URL(String(input)).pathname;
+        if (
+          auth.userId !== firstId ||
+          !/\/(quotes|technical_questions)$/.test(path)
+        ) {
+          return response;
+        }
+        const [first] = await response.json();
+        return Response.json([
+          first,
+          ...Array.from({ length: 25 }, (_, index) => ({
+            ...first,
+            id: `00000000-0000-4000-8000-${String(25 - index).padStart(12, "0")}`,
+            number: 100 - index,
+            description: `Dúvida anterior ${index + 1}`,
+          })),
+        ]);
+      });
       const client = renderProtectedPage();
       expect(screen.getByText("Verificando sessão…")).toBeInTheDocument();
       emit("INITIAL_SESSION", firstId);
@@ -158,7 +178,7 @@ describe("Isolamento de dados por sessão", () => {
       expect(
         screen.getByRole("option", { name: /ORC-00101/ }),
       ).toBeInTheDocument();
-      expect(screen.getByText("Registrar esclarecimento")).toBeInTheDocument();
+      expect(screen.getAllByText("Registrar esclarecimento")).toHaveLength(25);
 
       const previousQuotes = deferredResponse();
       const previousQuestions = deferredResponse();
@@ -169,12 +189,16 @@ describe("Isolamento de dados por sessão", () => {
       };
       const pending: AbortSignal[] = [];
       request.mockImplementation(async (input, init) => {
-        const path = new URL(String(input)).pathname;
+        const { pathname: path, searchParams } = new URL(String(input));
         if (auth.userId === firstId && path.endsWith("/quotes")) {
+          expect(searchParams.get("number")).toBe("lt.77");
           pending.push(init!.signal!);
           return previousQuotes.promise;
         }
         if (auth.userId === firstId && path.endsWith("/technical_questions")) {
+          expect(searchParams.get("or")).toContain(
+            "id.lt.00000000-0000-4000-8000-000000000002",
+          );
           pending.push(init!.signal!);
           return previousQuestions.promise;
         }
@@ -182,8 +206,12 @@ describe("Isolamento de dados por sessão", () => {
         return respond(input);
       });
 
-      void client.refetchQueries({ queryKey: ["quotes"] });
-      void client.refetchQueries({ queryKey: ["technical-questions"] });
+      fireEvent.click(
+        screen.getByRole("button", { name: "Carregar mais orçamentos" }),
+      );
+      fireEvent.click(
+        screen.getByRole("button", { name: "Carregar mais dúvidas" }),
+      );
       await waitFor(() => expect(pending).toHaveLength(2));
 
       if (event === "SIGNED_OUT") {
