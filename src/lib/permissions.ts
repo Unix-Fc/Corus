@@ -7,6 +7,7 @@ export function permissionsFor(roles: readonly Role[]) {
     access: admin || orc,
     editQuotes: admin || orc,
     changeStatus: admin,
+    clarifyTechnicalQuestions: admin,
     viewAllQuotes: admin,
     viewAudit: admin,
     editCatalog: admin,

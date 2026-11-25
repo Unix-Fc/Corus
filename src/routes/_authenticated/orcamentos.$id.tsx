@@ -43,12 +43,19 @@ export const Route = createFileRoute("/_authenticated/orcamentos/$id")({
 
 function Detail() {
   const { id } = Route.useParams();
-  const { data: q, isLoading } = useQuote(id);
+  const { data: q, isLoading, isError } = useQuote(id);
   const { data: catalog = [] } = useCatalog();
   const { data: params = [] } = useParams();
   const { data: audit = [] } = useAudit({ entity: "quotes", entityId: id });
   const { can } = useMe();
   const qc = useQueryClient();
+  if (isError)
+    return (
+      <p role="alert" className="text-destructive">
+        Não foi possível carregar o orçamento. Verifique o acesso ou recarregue
+        a página.
+      </p>
+    );
   if (isLoading || !q)
     return <p className="text-muted-foreground">Carregando…</p>;
   const t = quoteTotals(q);

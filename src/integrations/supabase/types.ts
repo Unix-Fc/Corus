@@ -158,6 +158,46 @@ export type Database = {
         };
         Relationships: [];
       };
+      material_price_history: {
+        Row: {
+          created_at: string;
+          created_by: string;
+          id: string;
+          kind: Database["public"]["Enums"]["material_price_kind"];
+          material_id: string;
+          material_kind: Database["public"]["Enums"]["catalog_kind"];
+          occurred_on: string | null;
+          source: string;
+          unit: string;
+          unit_price: number;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string;
+          id?: string;
+          kind: Database["public"]["Enums"]["material_price_kind"];
+          material_id: string;
+          material_kind?: Database["public"]["Enums"]["catalog_kind"];
+          occurred_on?: string | null;
+          source: string;
+          unit: string;
+          unit_price: number;
+          updated_at?: string;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["material_price_history"]["Insert"]
+        >;
+        Relationships: [
+          {
+            foreignKeyName: "material_price_history_material_fkey";
+            columns: ["material_id", "material_kind"];
+            isOneToOne: false;
+            referencedRelation: "catalog_items";
+            referencedColumns: ["id", "kind"];
+          },
+        ];
+      };
       profiles: {
         Row: {
           access_enabled: boolean;
@@ -259,6 +299,47 @@ export type Database = {
           },
         ];
       };
+      technical_questions: {
+        Row: {
+          clarification: string | null;
+          created_at: string;
+          created_by: string;
+          description: string;
+          id: string;
+          quote_id: string;
+          status: Database["public"]["Enums"]["technical_question_status"];
+          updated_at: string;
+        };
+        Insert: {
+          clarification?: string | null;
+          created_at?: string;
+          created_by?: string;
+          description: string;
+          id?: string;
+          quote_id: string;
+          status?: Database["public"]["Enums"]["technical_question_status"];
+          updated_at?: string;
+        };
+        Update: {
+          clarification?: string | null;
+          created_at?: string;
+          created_by?: string;
+          description?: string;
+          id?: string;
+          quote_id?: string;
+          status?: Database["public"]["Enums"]["technical_question_status"];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "technical_questions_quote_id_fkey";
+            columns: ["quote_id"];
+            isOneToOne: false;
+            referencedRelation: "quotes";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       user_roles: {
         Row: {
           id: string;
@@ -301,8 +382,10 @@ export type Database = {
     Enums: {
       app_role: "admin" | "orcamentista" | "gerente";
       catalog_kind: "material" | "maquina" | "ferramenta" | "cargo" | "servico";
+      material_price_kind: "compra" | "referencia";
       quote_status:
         "rascunho" | "pendente" | "em_negociacao" | "aprovado" | "reprovado";
+      technical_question_status: "aberta" | "esclarecida";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -432,6 +515,7 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "orcamentista", "gerente"],
       catalog_kind: ["material", "maquina", "ferramenta", "cargo", "servico"],
+      material_price_kind: ["compra", "referencia"],
       quote_status: [
         "rascunho",
         "pendente",
@@ -439,6 +523,7 @@ export const Constants = {
         "aprovado",
         "reprovado",
       ],
+      technical_question_status: ["aberta", "esclarecida"],
     },
   },
 } as const;

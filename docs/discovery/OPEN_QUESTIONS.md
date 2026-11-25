@@ -37,6 +37,19 @@ Todas as questões abaixo permanecem abertas no SRC-04, versão 2.1. Não foram 
 | OPEN-031 | Treinamento e transição sem interrupção total. | P2 |
 | OPEN-032 | Setores com acesso e responsabilidades formais no sistema. | P1 |
 
+## Comportamento provisório de FR-014 para validação de OPEN-009
+
+- A dúvida fica vinculada a um orçamento e ao projeto identificado nesse orçamento. A consulta e o cadastro herdam a visibilidade do orçamento.
+- A dúvida começa **Aberta**. Um administrador pode registrar um esclarecimento obrigatório, o que a move para **Esclarecida**. Nesta versão, a transição ocorre uma vez e independe do estado do orçamento.
+- O administrador é o perfil autorizado a registrar o esclarecimento nesta versão. A equipe ainda precisa validar quem responde pela dúvida, quais prazos e notificações se aplicam e se o fluxo deve permitir correção, reabertura ou outros estados.
+
+## Comportamento provisório de US-019 e FR-019
+
+- O histórico começa vazio. Administradores ativos podem registrar compras realizadas ou referências de preço com material, preço unitário em reais, unidade e fonte identificável. A data pode ficar em branco quando desconhecida. Administradores e orçamentistas ativos podem consultar.
+- O preço do catálogo aparece separadamente. O zero padrão do catálogo indica ausência de preço informado nesta consulta. A data de atualização do cadastro pode refletir mudanças em outros campos. Os valores dos orçamentos são estimativas. Nenhum desses dados é convertido em registro de compra.
+- As entradas manuais preservam a fonte, a unidade e a autoria do registro. A interface oferece inclusão e consulta. A equipe ainda precisa definir o processo de correção e conciliação.
+- A fonte prevalente (OPEN-012), o período e os critérios para tratar valores atípicos (OPEN-013), a integração com ERP (OPEN-016/017) e o uso automático no cálculo (OPEN-026) seguem em validação. Nesta versão, o histórico é consultivo e não altera o preço do catálogo nem o cálculo.
+
 ## Conflitos, ambiguidades e dependências registrados
 
 ### Conflito

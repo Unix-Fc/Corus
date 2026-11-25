@@ -22,6 +22,27 @@
       "when": 1793833200000,
       "tag": "0002_role_access_and_quote_flow",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1795525200000,
+      "tag": "0003_technical_questions",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1795612800000,
+      "tag": "0004_material_price_history",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1795627722657,
+      "tag": "0005_quote_status_history_read",
+      "breakpoints": true
     }
   ]
 }
