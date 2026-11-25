@@ -43,6 +43,13 @@
       "when": 1795627722657,
       "tag": "0005_quote_status_history_read",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1795627722658,
+      "tag": "0006_quote_calculation_audit_snapshot",
+      "breakpoints": true
     }
   ]
 }

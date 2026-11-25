@@ -37,6 +37,10 @@ Todas as questões abaixo permanecem abertas no SRC-04, versão 2.1. Não foram 
 | OPEN-031 | Treinamento e transição sem interrupção total. | P2 |
 | OPEN-032 | Setores com acesso e responsabilidades formais no sistema. | P1 |
 
+### Implementação provisória relacionada a OPEN-024
+
+O protótipo registra alterações de orçamentos com os valores anteriores e novos e, para novos orçamentos, preserva também os dados iniciais usados no cálculo. Administradores ativos consultam a auditoria geral; o criador ativo consulta o histórico do próprio orçamento. A lista detalha os campos registrados. A seleção definitiva de eventos, o nível de detalhe para reproduzir fórmulas históricas, o prazo de retenção e as regras formais de imutabilidade permanecem pendentes de validação.
+
 ## Comportamento provisório de FR-014 para validação de OPEN-009
 
 - A dúvida fica vinculada a um orçamento e ao projeto identificado nesse orçamento. A consulta e o cadastro herdam a visibilidade do orçamento.
