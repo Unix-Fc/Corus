@@ -49,7 +49,7 @@ function AuthPage() {
       </div>
       <div className="flex items-center justify-center p-6">
         <div className="w-full max-w-sm">
-          <h1 className="mb-6 text-2xl font-semibold">Acesso ao sistema</h1>
+          <h1 className="mb-6 text-2xl font-semibold">Acesse sua conta</h1>
           <form onSubmit={signIn} className="mt-4 space-y-4">
             <div className="space-y-1.5"><Label>E-mail</Label><Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
             <div className="space-y-1.5"><Label>Senha</Label><Input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} /></div>
